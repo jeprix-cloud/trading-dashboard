@@ -884,6 +884,8 @@ async function saveSettings() {
         // Save binance settings
         await saveBinanceConfig();
     }
+    // Close modal after save
+    closeSettingsModal();
 }
 
 // ============================================
