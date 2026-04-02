@@ -1,16 +1,21 @@
 """
 Signals Routes - Get trading signals
+Reads from data/signals.json (written by bot scheduler) or falls back to mock data.
 """
 from flask import Blueprint, jsonify, request
 from datetime import datetime
+import json
 import os
 import sys
+
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from services.auth import require_auth
 
 signals_bp = Blueprint('signals', __name__)
 
-# Mock signals for demo - replace with real signal engine
+SIGNALS_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'signals.json')
+
+# Mock signals shown when bot hasn't run yet
 MOCK_SIGNALS = [
     {
         'id': 'sig_001',
@@ -57,13 +62,28 @@ MOCK_SIGNALS = [
 ]
 
 
+def get_current_signals():
+    """Get signals from file (real) or mock data."""
+    if os.path.exists(SIGNALS_PATH):
+        try:
+            with open(SIGNALS_PATH, 'r') as f:
+                data = json.load(f)
+            signals = data.get('signals', [])
+            if signals:
+                return signals
+        except (json.JSONDecodeError, IOError):
+            pass
+    return MOCK_SIGNALS
+
+
 @signals_bp.route('', methods=['GET'])
 @require_auth
 def get_signals():
     """Get current trading signals"""
+    signals = get_current_signals()
     return jsonify({
-        'signals': MOCK_SIGNALS,
-        'count': len(MOCK_SIGNALS),
+        'signals': signals,
+        'count': len(signals),
         'timestamp': datetime.now().isoformat()
     })
 
@@ -72,7 +92,8 @@ def get_signals():
 @require_auth
 def get_signal(signal_id):
     """Get specific signal by ID"""
-    signal = next((s for s in MOCK_SIGNALS if s['id'] == signal_id), None)
+    signals = get_current_signals()
+    signal = next((s for s in signals if s.get('id') == signal_id), None)
     if signal is None:
         return jsonify({'error': 'Signal not found'}), 404
     return jsonify(signal)
@@ -85,16 +106,31 @@ def log_outcome(signal_id):
     data = request.get_json()
     outcome = data.get('outcome')
     price = data.get('price')
-    
-    signal = next((s for s in MOCK_SIGNALS if s['id'] == signal_id), None)
+
+    signals = get_current_signals()
+    signal = next((s for s in signals if s.get('id') == signal_id), None)
     if signal is None:
         return jsonify({'error': 'Signal not found'}), 404
-    
+
     signal['status'] = outcome.upper()
     signal['closed_at'] = datetime.now().isoformat()
     if price:
         signal['exit_price'] = price
-    
+
+    # Persist updated signals
+    if os.path.exists(SIGNALS_PATH):
+        try:
+            with open(SIGNALS_PATH, 'r') as f:
+                file_data = json.load(f)
+            for i, s in enumerate(file_data.get('signals', [])):
+                if s.get('id') == signal_id:
+                    file_data['signals'][i] = signal
+                    break
+            with open(SIGNALS_PATH, 'w') as f:
+                json.dump(file_data, f, indent=2)
+        except Exception:
+            pass
+
     return jsonify({
         'success': True,
         'signal': signal

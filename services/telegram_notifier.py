@@ -188,8 +188,10 @@ def notify_bot_started(config):
     return send_message(message)
 
 
-def notify_bot_stopped(session_stats):
+def notify_bot_stopped(session_stats, config=None):
     """Send bot stopped notification"""
+    if config is None:
+        config = load_config()
     if not config.get('notification_bot_startstop', True):
         return
     
@@ -200,8 +202,10 @@ def notify_bot_stopped(session_stats):
     return send_message(message)
 
 
-def notify_tp_hit(signal, exit_price):
+def notify_tp_hit(signal, exit_price, config=None):
     """Send TP hit notification"""
+    if config is None:
+        config = load_config()
     if not config.get('notification_tp_hit', True):
         return
     
@@ -212,8 +216,10 @@ def notify_tp_hit(signal, exit_price):
     return send_message(message)
 
 
-def notify_sl_hit(signal, exit_price):
+def notify_sl_hit(signal, exit_price, config=None):
     """Send SL hit notification"""
+    if config is None:
+        config = load_config()
     if not config.get('notification_sl_hit', True):
         return
     
@@ -224,8 +230,10 @@ def notify_sl_hit(signal, exit_price):
     return send_message(message)
 
 
-def notify_daily_summary(performance):
+def notify_daily_summary(performance, config=None):
     """Send daily summary notification"""
+    if config is None:
+        config = load_config()
     if not config.get('notification_daily_summary', True):
         return
     
@@ -234,3 +242,4 @@ def notify_daily_summary(performance):
     
     message = format_daily_summary(performance)
     return send_message(message)
+
