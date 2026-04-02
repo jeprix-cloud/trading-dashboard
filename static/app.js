@@ -552,6 +552,100 @@ async function runBacktest() {
 }
 
 // ============================================
+// EVOLUTION SYSTEM
+// ============================================
+function openEvolutionModal() {
+    const overlay = document.getElementById('evolution-modal');
+    if (overlay) overlay.classList.add('show');
+}
+
+function closeEvolutionModal() {
+    const overlay = document.getElementById('evolution-modal');
+    if (overlay) overlay.classList.remove('show');
+}
+
+let lastEvolutionResult = null;
+
+async function runEvolve() {
+    openEvolutionModal();
+    const container = document.getElementById('evolution-content');
+    const applyBtn = document.getElementById('apply-evolution-btn');
+    if (container) container.innerHTML = '<div class="loading"><span class="spinner"></span> Analyzing trades & evolving thresholds...</div>';
+    if (applyBtn) applyBtn.style.display = 'none';
+
+    showToast('Running evolution...', 'info');
+    const data = await apiPost('/api/learning/evolution/evolve', { apply_to_config: false });
+
+    if (!data) {
+        if (container) container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">Evolution failed</div></div>';
+        showToast('Evolution failed', 'error');
+        return;
+    }
+
+    if (!data.success) {
+        if (container) container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">📊</div><div class="empty-state-text">${data.message || 'Cannot evolve yet'}</div><div class="empty-state-sub">Log more trade outcomes to enable evolution</div></div>`;
+        showToast(data.message || 'Not enough data', 'info');
+        return;
+    }
+
+    lastEvolutionResult = data;
+
+    let html = `
+        <div class="perf-stats" style="margin-bottom:1rem;">
+            <div class="perf-stat"><div class="perf-value">#${data.generation}</div><div class="perf-label">Generation</div></div>
+            <div class="perf-stat"><div class="perf-value">${data.trades_analyzed}</div><div class="perf-label">Trades</div></div>
+            <div class="perf-stat"><div class="perf-value">${data.overall_win_rate}%</div><div class="perf-label">Win Rate</div></div>
+            <div class="perf-stat"><div class="perf-value ${data.avg_pnl >= 0 ? 'positive' : 'negative'}">${data.avg_pnl >= 0 ? '+' : ''}${data.avg_pnl}%</div><div class="perf-label">Avg PnL</div></div>
+        </div>`;
+
+    if (data.changes && data.changes.length > 0) {
+        html += `<div class="control-label" style="margin-bottom:0.5rem;">Threshold Changes</div>
+        <table class="history-table"><thead><tr><th>Parameter</th><th>Before</th><th>After</th><th></th></tr></thead><tbody>`;
+        for (const c of data.changes) {
+            const arrow = c.direction === 'up' ? '↑' : '↓';
+            const color = c.direction === 'up' ? 'var(--accent-green)' : 'var(--accent-red)';
+            html += `<tr>
+                <td>${c.param}</td>
+                <td style="color:var(--text-secondary)">${c.before}</td>
+                <td style="font-weight:600">${c.after}</td>
+                <td style="color:${color};font-size:1.1rem">${arrow}</td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+        if (applyBtn) applyBtn.style.display = '';
+    } else {
+        html += '<div class="empty-state" style="padding:1rem"><div class="empty-state-text">No threshold changes needed</div><div class="empty-state-sub">Current thresholds are optimal for your trade history</div></div>';
+    }
+
+    if (data.rsi_analysis && Object.keys(data.rsi_analysis).length > 0) {
+        html += `<div class="control-label" style="margin-top:1rem;margin-bottom:0.5rem;">RSI Bracket Analysis</div>
+        <table class="history-table"><thead><tr><th>Bracket</th><th>Wins</th><th>Losses</th><th>Win Rate</th></tr></thead><tbody>`;
+        for (const [name, info] of Object.entries(data.rsi_analysis)) {
+            const wr = info.win_rate;
+            const color = wr >= 60 ? 'var(--accent-green)' : wr >= 40 ? 'var(--accent-yellow)' : 'var(--accent-red)';
+            html += `<tr><td>${name}</td><td>${info.wins}</td><td>${info.losses}</td><td style="color:${color}">${wr}%</td></tr>`;
+        }
+        html += '</tbody></table>';
+    }
+
+    if (container) container.innerHTML = html;
+    showToast(`Evolution Gen #${data.generation} complete`, 'success');
+}
+
+async function applyEvolution() {
+    showToast('Applying evolved thresholds to config...', 'info');
+    const data = await apiPost('/api/learning/evolution/evolve', { apply_to_config: true });
+    if (data && data.success) {
+        showToast('Thresholds applied to config!', 'success');
+        loadConfig();
+        const applyBtn = document.getElementById('apply-evolution-btn');
+        if (applyBtn) applyBtn.style.display = 'none';
+    } else {
+        showToast('Failed to apply thresholds', 'error');
+    }
+}
+
+// ============================================
 // REFRESH ALL
 // ============================================
 function refreshAll() {

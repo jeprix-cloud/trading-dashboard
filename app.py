@@ -10,6 +10,7 @@ from routes.performance import performance_bp
 from routes.config import config_bp
 from routes.telegram import telegram_bp
 from routes.auth import auth_bp
+from routes.learning import learning_bp
 from services.auth import require_auth, is_authenticated, SESSION_SECRET
 
 app = Flask(__name__)
@@ -25,6 +26,7 @@ app.register_blueprint(performance_bp, url_prefix='/api/performance')
 app.register_blueprint(config_bp, url_prefix='/api/config')
 app.register_blueprint(telegram_bp, url_prefix='/api/telegram')
 app.register_blueprint(auth_bp)
+app.register_blueprint(learning_bp, url_prefix='/api/learning')
 
 
 @app.route('/')

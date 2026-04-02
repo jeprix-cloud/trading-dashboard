@@ -169,7 +169,7 @@
                 <button class="btn-secondary" onclick="openLogOutcomeModal()">LOG OUTCOME</button>
                 <button class="btn-secondary" onclick="openHistoryModal()">VIEW HISTORY</button>
                 <button class="btn-secondary" onclick="runBacktest()">RUN BACKTEST</button>
-                <button class="btn-secondary" onclick="showToast('Evolution coming in Priority 4','info')">EVOLVE</button>
+                <button class="btn-secondary" onclick="runEvolve()">EVOLVE</button>
             </div>
         </div>
     </div>
@@ -257,6 +257,23 @@
             </div>
             <div class="modal-body" id="backtest-content" style="max-height:450px;overflow-y:auto;">
                 <div class="loading"><span class="spinner"></span> Running backtest...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== EVOLUTION MODAL ========== -->
+    <div class="modal-overlay" id="evolution-modal">
+        <div class="modal" style="max-width:560px;">
+            <div class="modal-header">
+                <h2>🧬 Evolution Results</h2>
+                <button class="modal-close" onclick="closeEvolutionModal()">✕</button>
+            </div>
+            <div class="modal-body" id="evolution-content" style="max-height:450px;overflow-y:auto;">
+                <div class="loading"><span class="spinner"></span> Evolving thresholds...</div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeEvolutionModal()" style="flex:1;justify-content:center;">CLOSE</button>
+                <button class="btn btn-start" id="apply-evolution-btn" onclick="applyEvolution()" style="flex:1;justify-content:center;display:none;">APPLY TO CONFIG</button>
             </div>
         </div>
     </div>

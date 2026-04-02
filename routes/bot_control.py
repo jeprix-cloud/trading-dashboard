@@ -97,6 +97,18 @@ def scan_job():
         print(f"[Bot] ❌ Scan error: {e}")
         signals = []
 
+    # Apply learning system (if enabled)
+    if config.get('apply_lessons', True) and signals:
+        try:
+            from strategies.lessons import apply_lessons as apply_learned_lessons
+            original_count = len(signals)
+            signals = apply_learned_lessons(signals, market_data)
+            filtered = original_count - len(signals)
+            if filtered > 0:
+                print(f"[Bot] 🧠 Learning filtered {filtered} signals (blacklisted patterns)")
+        except Exception as e:
+            print(f"[Bot] ⚠️ Learning system error (non-fatal): {e}")
+
     # Save signals to data/signals.json
     write_json(SIGNALS_PATH, {
         'signals': signals,
