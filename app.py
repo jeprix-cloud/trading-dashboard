@@ -7,6 +7,7 @@ from routes.signals import signals_bp
 from routes.market import market_bp
 from routes.performance import performance_bp
 from routes.config import config_bp
+from routes.telegram import telegram_bp
 
 app = Flask(__name__)
 app.config['JSON_SORT_KEYS'] = False
@@ -17,6 +18,7 @@ app.register_blueprint(signals_bp, url_prefix='/api/signals')
 app.register_blueprint(market_bp, url_prefix='/api/market')
 app.register_blueprint(performance_bp, url_prefix='/api/performance')
 app.register_blueprint(config_bp, url_prefix='/api/config')
+app.register_blueprint(telegram_bp, url_prefix='/api/telegram')
 
 
 @app.route('/')
