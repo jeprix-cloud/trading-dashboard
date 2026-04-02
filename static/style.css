@@ -1087,3 +1087,244 @@ select option {
     padding: 1.25rem;
   }
 }
+
+/* ========== SETTINGS TABS ========== */
+.settings-tabs {
+    display: flex;
+    gap: 0;
+    margin-bottom: 1.25rem;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: 0;
+}
+
+.settings-tab {
+    flex: 1;
+    padding: 0.75rem 1rem;
+    background: transparent;
+    border: none;
+    border-bottom: 2px solid transparent;
+    color: var(--text-secondary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+}
+
+.settings-tab:hover {
+    color: var(--text-primary);
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.settings-tab.active {
+    color: var(--accent-green);
+    border-bottom-color: var(--accent-green);
+}
+
+.tab-icon {
+    font-size: 1rem;
+}
+
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
+/* ========== BINANCE SECTION ========== */
+.binance-warning {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+    font-size: 0.75rem;
+    color: var(--accent-yellow);
+}
+
+.warning-icon {
+    font-size: 1rem;
+}
+
+/* ========== CONNECTION STATUS ========== */
+.connection-status {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 0.75rem;
+    border-radius: var(--radius-md);
+    font-size: 0.8rem;
+    margin-top: 0.5rem;
+}
+
+.connection-status.pending {
+    background: rgba(100, 116, 139, 0.15);
+    color: var(--text-secondary);
+}
+
+.connection-status.success {
+    background: rgba(0, 255, 157, 0.1);
+    color: var(--accent-green);
+}
+
+.connection-status.error {
+    background: rgba(255, 71, 87, 0.1);
+    color: var(--accent-red);
+}
+
+/* ========== STATUS INDICATORS ========== */
+.status-indicators {
+    display: flex;
+    flex-direction: column;
+    gap: 0.4rem;
+    margin-top: 0.75rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+}
+
+.status-row {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+.status-dot-sm {
+    width: 8px;
+    height: 8px;
+    border-radius: 50%;
+    background: var(--text-muted);
+    transition: background 0.2s;
+}
+
+.status-dot-sm.connected {
+    background: var(--accent-green);
+    box-shadow: 0 0 6px var(--accent-green);
+}
+
+.status-dot-sm.disconnected {
+    background: var(--accent-red);
+}
+
+/* ========== EXECUTION BADGE ========== */
+.execution-badge {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    border-radius: var(--radius-md);
+    margin-top: 0.5rem;
+    font-size: 0.7rem;
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+}
+
+.execution-mode-label {
+    color: var(--text-secondary);
+}
+
+.execution-mode-value {
+    font-weight: 600;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.execution-badge.mode-signal_only .execution-mode-value {
+    color: var(--text-secondary);
+}
+
+.execution-badge.mode-semi_auto .execution-mode-value {
+    color: var(--accent-yellow);
+}
+
+.execution-badge.mode-full_auto .execution-mode-value {
+    color: var(--accent-green);
+}
+
+/* ========== BALANCES SECTION ========== */
+.balances-section {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--border);
+}
+
+.balances-list {
+    display: flex;
+    flex-direction: column;
+    gap: 0.3rem;
+    max-height: 120px;
+    overflow-y: auto;
+}
+
+.balance-item {
+    display: flex;
+    justify-content: space-between;
+    padding: 0.35rem 0.5rem;
+    background: var(--bg-primary);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+}
+
+.balance-asset {
+    font-weight: 600;
+    color: var(--text-primary);
+}
+
+.balance-amount {
+    font-family: 'JetBrains Mono', monospace;
+    color: var(--text-secondary);
+}
+
+/* ========== EXECUTE MODAL ========== */
+.execute-warning {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.75rem;
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: var(--radius-md);
+    margin-bottom: 1rem;
+    font-size: 0.8rem;
+    color: var(--accent-yellow);
+}
+
+.execute-signal-card {
+    background: var(--bg-primary);
+    border: 1px solid var(--border);
+    border-radius: var(--radius-md);
+    padding: 1rem;
+    margin-top: 0.5rem;
+}
+
+.execute-signal-card .signal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.75rem;
+}
+
+.execute-signal-card .signal-symbol {
+    font-weight: 600;
+    font-size: 1rem;
+}
+
+.execute-signal-card .signal-details {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: 0.5rem;
+}
+
+.execute-signal-card .signal-detail {
+    display: flex;
+    flex-direction: column;
+    gap: 0.15rem;
+}

@@ -129,10 +129,22 @@
             <button class="btn btn-start btn-full" onclick="startBot()">▶ START BOT</button>
             <button class="btn btn-settings btn-full" onclick="openSettingsModal()">⚙ SETTINGS</button>
 
-            <!-- Telegram status indicator -->
-            <div class="tg-status">
-                <div class="tg-status-dot" id="tg-status-dot"></div>
-                <span id="tg-status-text">Checking...</span>
+            <!-- Status indicators -->
+            <div class="status-indicators">
+                <div class="status-row">
+                    <div class="status-dot-sm" id="tg-status-dot"></div>
+                    <span>Telegram</span>
+                </div>
+                <div class="status-row">
+                    <div class="status-dot-sm" id="binance-status-dot"></div>
+                    <span>Binance</span>
+                </div>
+            </div>
+
+            <!-- Execution mode badge -->
+            <div class="execution-badge" id="execution-badge">
+                <span class="execution-mode-label">Mode:</span>
+                <span class="execution-mode-value" id="execution-mode-value">SIGNALS ONLY</span>
             </div>
         </div>
 
@@ -174,14 +186,26 @@
         </div>
     </div>
 
-    <!-- ========== SETTINGS MODAL (Telegram) ========== -->
+    <!-- ========== SETTINGS MODAL (Tabbed: Telegram + Binance) ========== -->
     <div class="modal-overlay" id="settings-modal">
-        <div class="modal">
+        <div class="modal" style="max-width:480px;">
             <div class="modal-header">
-                <h2>⚙ Telegram Settings</h2>
+                <h2>⚙ Settings</h2>
                 <button class="modal-close" onclick="closeSettingsModal()">✕</button>
             </div>
-            <div class="modal-body">
+
+            <!-- Tabs -->
+            <div class="settings-tabs">
+                <button class="settings-tab active" onclick="switchSettingsTab('telegram')" id="tab-telegram">
+                    <span class="tab-icon">📱</span> Telegram
+                </button>
+                <button class="settings-tab" onclick="switchSettingsTab('binance')" id="tab-binance">
+                    <span class="tab-icon">📈</span> Binance
+                </button>
+            </div>
+
+            <!-- Tab Content: Telegram -->
+            <div class="tab-content active" id="content-telegram">
                 <div class="control-group">
                     <div class="control-label">Bot Token</div>
                     <input type="password" id="tg-token" placeholder="123456:ABC-DEF...">
@@ -194,9 +218,47 @@
                     <span>○</span> Not configured
                 </div>
             </div>
+
+            <!-- Tab Content: Binance -->
+            <div class="tab-content" id="content-binance">
+                <div class="binance-warning">
+                    <span class="warning-icon">⚠️</span>
+                    <span>Trading involves risk. Use at your own discretion.</span>
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">API Key</div>
+                    <input type="password" id="binance-api-key" placeholder="Your Binance API Key">
+                </div>
+                <div class="control-group">
+                    <div class="control-label">Secret Key</div>
+                    <input type="password" id="binance-secret-key" placeholder="Your Binance Secret Key">
+                </div>
+
+                <div class="control-group">
+                    <div class="control-label">Execution Mode</div>
+                    <select id="execution-mode-select">
+                        <option value="signal_only">🔔 Signals Only (No trading)</option>
+                        <option value="semi_auto">🟡 Semi-Auto (Confirm before trade)</option>
+                        <option value="full_auto">🟢 Full-Auto (Auto execute high confidence)</option>
+                    </select>
+                </div>
+
+                <div id="binance-connection-status" class="connection-status pending">
+                    <span>○</span> Not configured
+                </div>
+
+                <!-- Balance display when connected -->
+                <div id="binance-balances" class="balances-section" style="display:none;">
+                    <div class="control-label" style="margin-bottom:0.5rem;">Your Balances</div>
+                    <div class="balances-list" id="balances-list"></div>
+                </div>
+            </div>
+
+            <!-- Modal Actions -->
             <div class="modal-actions">
-                <button class="btn btn-secondary" onclick="testTelegram()" style="flex:1;text-align:center;justify-content:center;">TEST CONNECTION</button>
-                <button class="btn btn-start" onclick="sendTestSignal()" style="flex:1;justify-content:center;">SEND TEST SIGNAL</button>
+                <button class="btn btn-secondary" onclick="testSettings()" style="flex:1;text-align:center;justify-content:center;">TEST CONNECTION</button>
+                <button class="btn btn-start" onclick="saveSettings()" style="flex:1;justify-content:center;">SAVE</button>
             </div>
         </div>
     </div>
@@ -274,6 +336,27 @@
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeEvolutionModal()" style="flex:1;justify-content:center;">CLOSE</button>
                 <button class="btn btn-start" id="apply-evolution-btn" onclick="applyEvolution()" style="flex:1;justify-content:center;display:none;">APPLY TO CONFIG</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== EXECUTE CONFIRMATION MODAL ========== -->
+    <div class="modal-overlay" id="execute-modal">
+        <div class="modal" style="max-width:400px;">
+            <div class="modal-header">
+                <h2>⚡ Execute Trade</h2>
+                <button class="modal-close" onclick="closeExecuteModal()">✕</button>
+            </div>
+            <div class="modal-body" id="execute-content">
+                <div class="execute-warning">
+                    <span class="warning-icon">⚠️</span>
+                    <span>This is a SIMULATED trade. Do you want to proceed?</span>
+                </div>
+                <div id="execute-signal-details"></div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeExecuteModal()" style="flex:1;justify-content:center;">CANCEL</button>
+                <button class="btn btn-start" onclick="confirmExecute()" style="flex:1;justify-content:center;">CONFIRM</button>
             </div>
         </div>
     </div>

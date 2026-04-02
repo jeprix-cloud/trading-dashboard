@@ -646,6 +646,302 @@ async function applyEvolution() {
 }
 
 // ============================================
+// SETTINGS MODAL - TAB SYSTEM
+// ============================================
+let currentSettingsTab = 'telegram';
+
+function switchSettingsTab(tab) {
+    currentSettingsTab = tab;
+
+    // Update tab buttons
+    document.querySelectorAll('.settings-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('tab-' + tab)?.classList.add('active');
+
+    // Update tab content
+    document.querySelectorAll('.tab-content').forEach(c => c.classList.remove('active'));
+    document.getElementById('content-' + tab)?.classList.add('active');
+}
+
+function openSettingsModal() {
+    const overlay = document.getElementById('settings-modal');
+    if (overlay) {
+        overlay.classList.add('show');
+        // Load status for current tab
+        if (currentSettingsTab === 'telegram') {
+            checkTelegramStatus();
+        } else {
+            checkBinanceStatus();
+        }
+    }
+}
+
+function closeSettingsModal() {
+    const overlay = document.getElementById('settings-modal');
+    if (overlay) overlay.classList.remove('show');
+}
+
+// ============================================
+// TELEGRAM FUNCTIONS
+// ============================================
+async function checkTelegramStatus() {
+    const data = await apiFetch('/api/telegram/status');
+    const statusEl = document.getElementById('tg-connection-status');
+    if (!statusEl) return;
+
+    if (data && data.configured) {
+        statusEl.innerHTML = '<span>✓</span> Telegram connected';
+        statusEl.className = 'connection-status success';
+    } else {
+        statusEl.innerHTML = '<span>○</span> Not configured';
+        statusEl.className = 'connection-status pending';
+    }
+}
+
+async function testTelegram() {
+    const token = document.getElementById('tg-token').value.trim();
+    const chatId = document.getElementById('tg-chatid').value.trim();
+
+    if (!token || !chatId) {
+        showToast('Enter Bot Token and Chat ID', 'error');
+        return;
+    }
+
+    showToast('Testing Telegram connection...', 'info');
+    const data = await apiPost('/api/telegram/test', { bot_token: token, chat_id: chatId });
+
+    if (data && data.success) {
+        showToast('Telegram connected!', 'success');
+        updateTelegramIndicator(true);
+        checkTelegramStatus();
+    } else {
+        showToast(data?.error || 'Telegram test failed', 'error');
+    }
+}
+
+async function sendTestSignal() {
+    showToast('Sending test signal...', 'info');
+    const data = await apiPost('/api/telegram/send-test-signal');
+    if (data && data.success) {
+        showToast('Test signal sent to Telegram!', 'success');
+    } else {
+        showToast(data?.error || 'Failed to send test signal', 'error');
+    }
+}
+
+function updateTelegramIndicator(connected) {
+    const dot = document.getElementById('tg-status-dot');
+    if (dot) {
+        dot.classList.toggle('connected', connected);
+        dot.classList.toggle('disconnected', !connected);
+    }
+}
+
+// ============================================
+// BINANCE FUNCTIONS
+// ============================================
+async function checkBinanceStatus() {
+    const data = await apiFetch('/api/binance/status');
+    const statusEl = document.getElementById('binance-connection-status');
+    const balancesEl = document.getElementById('binance-balances');
+    const balancesList = document.getElementById('balances-list');
+
+    if (!statusEl) return;
+
+    if (data && data.configured) {
+        if (data.connected) {
+            statusEl.innerHTML = '<span>✓</span> Binance connected';
+            statusEl.className = 'connection-status success';
+            updateBinanceIndicator(true);
+
+            // Show balances if available
+            if (data.balances && data.balances.length > 0 && balancesEl && balancesList) {
+                balancesEl.style.display = 'block';
+                balancesList.innerHTML = data.balances.map(b => `
+                    <div class="balance-item">
+                        <span class="balance-asset">${b.asset}</span>
+                        <span class="balance-amount">${b.total.toFixed(4)}</span>
+                    </div>
+                `).join('');
+            }
+        } else {
+            statusEl.innerHTML = `<span>✗</span> ${data.error || 'Connection failed'}`;
+            statusEl.className = 'connection-status error';
+            updateBinanceIndicator(false);
+        }
+    } else {
+        statusEl.innerHTML = '<span>○</span> Not configured';
+        statusEl.className = 'connection-status pending';
+        updateBinanceIndicator(false);
+    }
+}
+
+async function testBinance() {
+    const apiKey = document.getElementById('binance-api-key').value.trim();
+    const secretKey = document.getElementById('binance-secret-key').value.trim();
+
+    if (!apiKey || !secretKey) {
+        showToast('Enter API Key and Secret Key', 'error');
+        return;
+    }
+
+    showToast('Testing Binance connection...', 'info');
+    const data = await apiPost('/api/binance/test', { api_key: apiKey, secret_key: secretKey });
+
+    if (data && data.success) {
+        showToast('Binance connected!', 'success');
+        updateBinanceIndicator(true);
+        checkBinanceStatus();
+    } else {
+        showToast(data?.error || 'Binance test failed', 'error');
+        updateBinanceIndicator(false);
+    }
+}
+
+async function saveBinanceConfig() {
+    const apiKey = document.getElementById('binance-api-key').value.trim();
+    const secretKey = document.getElementById('binance-secret-key').value.trim();
+    const executionMode = document.getElementById('execution-mode-select').value;
+
+    const data = await apiPost('/api/binance/save', {
+        api_key: apiKey,
+        secret_key: secretKey,
+        execution_mode: executionMode
+    });
+
+    if (data && data.success) {
+        showToast('Binance settings saved!', 'success');
+        updateExecutionModeBadge(executionMode);
+    } else {
+        showToast('Failed to save Binance settings', 'error');
+    }
+}
+
+async function loadBinanceConfig() {
+    const data = await apiFetch('/api/config');
+    if (!data) return;
+
+    // Load execution mode
+    const execMode = data.execution_mode || 'signal_only';
+    const selectEl = document.getElementById('execution-mode-select');
+    if (selectEl) selectEl.value = execMode;
+
+    updateExecutionModeBadge(execMode);
+}
+
+function updateExecutionModeBadge(mode) {
+    const badge = document.getElementById('execution-badge');
+    const valueEl = document.getElementById('execution-mode-value');
+
+    if (valueEl) {
+        const modeLabels = {
+            'signal_only': 'SIGNALS ONLY',
+            'semi_auto': 'SEMI-AUTO',
+            'full_auto': 'FULL-AUTO'
+        };
+        valueEl.textContent = modeLabels[mode] || mode.toUpperCase();
+    }
+
+    if (badge) {
+        badge.className = 'execution-badge mode-' + mode;
+    }
+}
+
+function updateBinanceIndicator(connected) {
+    const dot = document.getElementById('binance-status-dot');
+    if (dot) {
+        dot.classList.toggle('connected', connected);
+        dot.classList.toggle('disconnected', !connected);
+    }
+}
+
+// ============================================
+// COMBINED SETTINGS HANDLERS
+// ============================================
+async function testSettings() {
+    if (currentSettingsTab === 'telegram') {
+        testTelegram();
+    } else {
+        testBinance();
+    }
+}
+
+async function saveSettings() {
+    if (currentSettingsTab === 'telegram') {
+        // Save telegram settings
+        const token = document.getElementById('tg-token').value.trim();
+        const chatId = document.getElementById('tg-chatid').value.trim();
+        await apiPost('/api/telegram/save', { bot_token: token, chat_id: chatId });
+    } else {
+        // Save binance settings
+        await saveBinanceConfig();
+    }
+}
+
+// ============================================
+// EXECUTE SIGNAL (Semi-Auto)
+// ============================================
+let pendingExecuteSignal = null;
+
+function openExecuteModal(signal) {
+    pendingExecuteSignal = signal;
+    const overlay = document.getElementById('execute-modal');
+    const detailsEl = document.getElementById('execute-signal-details');
+
+    if (overlay && detailsEl) {
+        detailsEl.innerHTML = `
+            <div class="execute-signal-card ${signal.side.toLowerCase()}">
+                <div class="signal-header">
+                    <span class="signal-symbol">${signal.symbol}</span>
+                    <span class="signal-side ${signal.side.toLowerCase()}">${signal.side}</span>
+                </div>
+                <div class="signal-details">
+                    <div class="signal-detail">
+                        <span class="detail-label">Entry</span>
+                        <span class="detail-value">${formatPrice(signal.entry)}</span>
+                    </div>
+                    <div class="signal-detail">
+                        <span class="detail-label">SL</span>
+                        <span class="detail-value" style="color:var(--accent-red)">-${signal.sl}%</span>
+                    </div>
+                    <div class="signal-detail">
+                        <span class="detail-label">TP</span>
+                        <span class="detail-value" style="color:var(--accent-green)">+${signal.tp}%</span>
+                    </div>
+                    <div class="signal-detail">
+                        <span class="detail-label">R:R</span>
+                        <span class="detail-value">1:${signal.rr}</span>
+                    </div>
+                </div>
+            </div>
+        `;
+        overlay.classList.add('show');
+    }
+}
+
+function closeExecuteModal() {
+    const overlay = document.getElementById('execute-modal');
+    if (overlay) overlay.classList.remove('show');
+    pendingExecuteSignal = null;
+}
+
+async function confirmExecute() {
+    if (!pendingExecuteSignal) return;
+
+    showToast('Executing trade...', 'info');
+    const data = await apiPost('/api/binance/execute', {
+        signal: pendingExecuteSignal,
+        confirmed: true
+    });
+
+    if (data && data.success) {
+        showToast(`Trade executed: ${data.order?.symbol || pendingExecuteSignal.symbol}`, 'success');
+        closeExecuteModal();
+    } else {
+        showToast(data?.error || 'Trade execution failed', 'error');
+    }
+}
+
+// ============================================
 // REFRESH ALL
 // ============================================
 function refreshAll() {
@@ -671,11 +967,18 @@ document.addEventListener('DOMContentLoaded', () => {
     // Load everything
     refreshAll();
     loadConfig();
+    loadBinanceConfig();
 
-    // Check telegram status for indicator
+    // Check status for indicators
     (async () => {
-        const data = await apiFetch('/api/telegram/status');
-        if (data) updateTelegramIndicator(data.configured);
+        const tgData = await apiFetch('/api/telegram/status');
+        if (tgData) updateTelegramIndicator(tgData.configured);
+
+        const binanceData = await apiFetch('/api/binance/status');
+        if (binanceData) {
+            updateBinanceIndicator(binanceData.connected);
+            updateExecutionModeBadge(binanceData.execution_mode || 'signal_only');
+        }
     })();
 
     // Auto-refresh every 30 seconds
