@@ -1,0 +1,40 @@
+# TradingCore Dashboard
+
+# Byte-compiled / optimized
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Environment
+.env
+venv/
+env/
+*.env
+
+# Logs
+*.log
+logs/
+
+# Data files
+data/*.json
+!data/.gitkeep
+config/*.json
+!config/.gitkeep
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+
+# Node (if any frontend deps)
+node_modules/
+
+# Build artifacts
+dist/
+build/
+*.egg-info/
