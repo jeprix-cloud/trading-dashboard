@@ -4,6 +4,9 @@ Market Routes - Fear & Greed, BTC Dominance, Trending Coins
 from flask import Blueprint, jsonify
 import requests
 from datetime import datetime
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from services.auth import require_auth
 
 market_bp = Blueprint('market', __name__)
 
@@ -72,6 +75,7 @@ def get_trending_coins():
 
 
 @market_bp.route('/pulse', methods=['GET'])
+@require_auth
 def get_pulse():
     """Get market pulse data"""
     fg = get_fear_greed()

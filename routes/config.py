@@ -4,6 +4,9 @@ Config Routes - Get and update configuration
 from flask import Blueprint, jsonify, request
 import json
 import os
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from services.auth import require_auth
 
 config_bp = Blueprint('config', __name__)
 
@@ -21,6 +24,7 @@ def write_config(data):
 
 
 @config_bp.route('', methods=['GET'])
+@require_auth
 def get_config():
     """Get current configuration"""
     config = read_config()
@@ -32,6 +36,7 @@ def get_config():
 
 
 @config_bp.route('', methods=['POST'])
+@require_auth
 def update_config():
     """Update configuration"""
     data = request.get_json()
@@ -65,6 +70,7 @@ def update_config():
 
 
 @config_bp.route('/reset', methods=['POST'])
+@require_auth
 def reset_config():
     """Reset config to defaults"""
     default_config = {

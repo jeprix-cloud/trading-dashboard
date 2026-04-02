@@ -1,8 +1,11 @@
 """
 Signals Routes - Get trading signals
 """
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, request
 from datetime import datetime
+import sys
+sys.path.append(os.path.dirname(os.path.dirname(__file__)))
+from services.auth import require_auth
 
 signals_bp = Blueprint('signals', __name__)
 
@@ -54,6 +57,7 @@ MOCK_SIGNALS = [
 
 
 @signals_bp.route('', methods=['GET'])
+@require_auth
 def get_signals():
     """Get current trading signals"""
     return jsonify({
@@ -64,6 +68,7 @@ def get_signals():
 
 
 @signals_bp.route('/<signal_id>', methods=['GET'])
+@require_auth
 def get_signal(signal_id):
     """Get specific signal by ID"""
     signal = next((s for s in MOCK_SIGNALS if s['id'] == signal_id), None)
@@ -73,17 +78,17 @@ def get_signal(signal_id):
 
 
 @signals_bp.route('/<signal_id>/outcome', methods=['POST'])
+@require_auth
 def log_outcome(signal_id):
     """Log trade outcome (TP, SL, or manual)"""
     data = request.get_json()
-    outcome = data.get('outcome')  # 'tp', 'sl', 'manual'
+    outcome = data.get('outcome')
     price = data.get('price')
     
     signal = next((s for s in MOCK_SIGNALS if s['id'] == signal_id), None)
     if signal is None:
         return jsonify({'error': 'Signal not found'}), 404
     
-    # Update signal status
     signal['status'] = outcome.upper()
     signal['closed_at'] = datetime.now().isoformat()
     if price:
