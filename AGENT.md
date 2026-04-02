@@ -148,7 +148,38 @@ def filter_by_volume(coins, min_volume):
     pass
 ```
 
-### Task 5: Add Unit Tests
+### Task 5: Connect Telegram Notifications
+
+**File:** `templates/dashboard.html` (add UI panel)
+
+Add a **Settings Panel** (modal or sidebar) for Telegram configuration:
+
+**UI Elements:**
+- Bot Token input field (password type)
+- Chat ID input field
+- "Test Connection" button
+- Connection status indicator (green/red dot)
+- Test signal button
+
+**API Integration:**
+- `GET /api/telegram/status` — Check if configured
+- `POST /api/telegram/test` — Test connection with credentials
+- `POST /api/telegram/save` — Save without testing
+- `POST /api/telegram/remove` — Remove configuration
+
+**Telegram Setup Flow in UI:**
+1. User enters Bot Token + Chat ID
+2. Click "Test Connection"
+3. If success → save + show green indicator
+4. User can click "Send Test Signal" to verify
+
+**Message Formats Already Implemented (in services/telegram_notifier.py):**
+- Signal alerts with full trade details
+- Bot start/stop notifications
+- TP/SL hit notifications
+- Daily summary at configured time
+
+### Task 6: Add Unit Tests
 
 **File:** `tests/test_signal_engine.py`
 
@@ -165,13 +196,15 @@ Test:
 3. **Read** existing `templates/dashboard.html` to understand current state
 4. **Enhance** dashboard.html to match spec exactly
 5. **Create** `static/style.css` and `static/app.js`
-6. **Implement** `strategies/signal_engine.py`
-7. **Implement** `strategies/screener.py`
-8. **Add** basic tests in `tests/`
-9. **Test** locally: `python app.py` → open `http://localhost:5000`
-10. **Verify** all API endpoints work
-11. **Commit** with meaningful message
-12. **Push** to main branch
+6. **Add** Telegram settings panel to dashboard
+7. **Implement** `strategies/signal_engine.py`
+8. **Implement** `strategies/screener.py`
+9. **Add** basic tests in `tests/`
+10. **Test** locally: `python app.py` → open `http://localhost:5000`
+11. **Verify** all API endpoints work
+12. **Verify** Telegram test connection works
+13. **Commit** with meaningful message
+14. **Push** to main branch
 
 ## Quality Standards
 
@@ -192,6 +225,8 @@ Before finishing, verify:
 - [ ] Bot START/STOP buttons work
 - [ ] Config dropdowns change values
 - [ ] Performance stats display
+- [ ] Telegram settings panel visible
+- [ ] Telegram test connection works
 - [ ] No console errors
 - [ ] Responsive on mobile width
 
