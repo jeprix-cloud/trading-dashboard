@@ -1,5 +1,5 @@
 """
-Market Routes - Fear & Greed, BTC Dominance, Trending Coins
+Market Routes - Fear & Greed, BTC Dominance, Trending Coins, BTC Trend
 """
 from flask import Blueprint, jsonify
 import requests
@@ -16,6 +16,7 @@ _cache = {
     'fear_greed': None,
     'btc_dominance': None,
     'trending': None,
+    'btc_trend': None,
     'last_fetch': None
 }
 
@@ -23,7 +24,6 @@ _cache = {
 def get_fear_greed():
     """Fetch Fear & Greed Index from alternative.me"""
     if _cache['fear_greed'] and _cache['last_fetch']:
-        # Cache for 5 minutes
         elapsed = (datetime.now() - _cache['last_fetch']).seconds
         if elapsed < 300:
             return _cache['fear_greed']
@@ -75,13 +75,48 @@ def get_trending_coins():
         return _cache['trending'] or ['BTC', 'ETH', 'SOL']
 
 
+def get_btc_trend():
+    """Get BTC trend using EMA analysis (real data)"""
+    if _cache['btc_trend'] and _cache['last_fetch']:
+        elapsed = (datetime.now() - _cache['last_fetch']).seconds
+        if elapsed < 300:
+            return _cache['btc_trend']
+    
+    try:
+        from strategies.signal_engine import fetch_klines, calculate_ema
+        klines = fetch_klines('BTCUSDT', '1h', limit=200)
+        if klines and len(klines['closes']) >= 50:
+            closes = klines['closes']
+            ema50 = calculate_ema(closes, 50)
+            ema200 = calculate_ema(closes, 200)
+            price = closes[-1]
+            
+            if price > ema50 and price > ema200:
+                trend = 'strong_bullish'
+            elif price > ema50:
+                trend = 'bullish'
+            elif price < ema50 and price < ema200:
+                trend = 'strong_bearish'
+            else:
+                trend = 'bearish'
+            
+            _cache['btc_trend'] = trend
+            _cache['last_fetch'] = datetime.now()
+            return trend
+    except:
+        pass
+    
+    return _cache['btc_trend'] or 'neutral'
+
+
 @market_bp.route('/pulse', methods=['GET'])
 @require_auth
 def get_pulse():
-    """Get market pulse data"""
+    """Get market pulse data (all real)"""
     fg = get_fear_greed()
     btc_dom = get_btc_dominance()
     trending = get_trending_coins()
+    btc_trend = get_btc_trend()
     
     # Determine F&G label
     if fg >= 75:
@@ -97,13 +132,14 @@ def get_pulse():
         'fear_greed': fg,
         'fear_greed_label': fg_label,
         'btc_dominance': btc_dom,
-        'btc_trend': 'bullish',  # TODO: implement BTC trend check
+        'btc_trend': btc_trend,
         'trending': trending,
         'timestamp': datetime.now().isoformat()
     })
 
 
 @market_bp.route('/fear-greed', methods=['GET'])
+@require_auth
 def get_fear_greed_only():
     """Get only Fear & Greed"""
     fg = get_fear_greed()
@@ -111,6 +147,7 @@ def get_fear_greed_only():
 
 
 @market_bp.route('/btc-dominance', methods=['GET'])
+@require_auth
 def get_btc_dominance_only():
     """Get only BTC Dominance"""
     btc_dom = get_btc_dominance()
@@ -118,7 +155,16 @@ def get_btc_dominance_only():
 
 
 @market_bp.route('/trending', methods=['GET'])
+@require_auth
 def get_trending_only():
     """Get only trending coins"""
     trending = get_trending_coins()
     return jsonify({'trending': trending, 'timestamp': datetime.now().isoformat()})
+
+
+@market_bp.route('/btc-trend', methods=['GET'])
+@require_auth
+def get_btc_trend_only():
+    """Get only BTC Trend"""
+    trend = get_btc_trend()
+    return jsonify({'btc_trend': trend, 'timestamp': datetime.now().isoformat()})

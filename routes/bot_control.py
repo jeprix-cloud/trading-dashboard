@@ -52,6 +52,8 @@ def get_market_data():
     """Fetch current market context for signal scoring."""
     try:
         import requests as req
+        from strategies.signal_engine import fetch_klines, calculate_ema
+
         # Fear & Greed
         fg = 50
         try:
@@ -68,9 +70,33 @@ def get_market_data():
         except Exception:
             pass
 
+        # BTC Trend (real EMA check)
+        btc_trend = 'neutral'
+        try:
+            klines = fetch_klines('BTCUSDT', '1h', limit=200)
+            if klines and len(klines['closes']) >= 50:
+                closes = klines['closes']
+                ema50 = calculate_ema(closes, 50)
+                ema200 = calculate_ema(closes, 200)
+                price = closes[-1]
+
+                # Trend: bullish if price above EMA50, bearish if below
+                if price > ema50:
+                    btc_trend = 'bullish'
+                else:
+                    btc_trend = 'bearish'
+
+                # Strong trend: price above both EMAs
+                if price > ema50 and price > ema200:
+                    btc_trend = 'strong_bullish'
+                elif price < ema50 and price < ema200:
+                    btc_trend = 'strong_bearish'
+        except Exception:
+            btc_trend = 'neutral'
+
         return {
             'fear_greed': fg,
-            'btc_trend': 'bullish',  # TODO: implement real check
+            'btc_trend': btc_trend,
             'trending': trending,
         }
     except Exception:
