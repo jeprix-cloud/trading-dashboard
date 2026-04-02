@@ -3,291 +3,80 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="TradingCore Dashboard — Real-time crypto trading signals, bot control, and performance tracking.">
     <title>TradingCore Dashboard</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-            background: #0a0e1a;
-            color: #e2e8f0;
-            min-height: 100vh;
-        }
-        /* Header */
-        .header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 1rem 2rem;
-            background: #111827;
-            border-bottom: 1px solid #1e293b;
-        }
-        .header-left {
-            display: flex;
-            align-items: center;
-            gap: 1rem;
-        }
-        .status-dot {
-            width: 12px;
-            height: 12px;
-            border-radius: 50%;
-            background: #64748b;
-        }
-        .status-dot.active {
-            background: #00ff9d;
-            box-shadow: 0 0 10px #00ff9d;
-            animation: pulse 2s infinite;
-        }
-        @keyframes pulse {
-            0%, 100% { opacity: 1; }
-            50% { opacity: 0.5; }
-        }
-        .header h1 {
-            font-size: 1.25rem;
-            font-weight: 600;
-        }
-        .btn {
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-weight: 500;
-            transition: all 0.2s;
-        }
-        .btn-stop {
-            background: #ff4757;
-            color: white;
-        }
-        .btn-start {
-            background: #00ff9d;
-            color: #0a0e1a;
-        }
-        /* Main Layout */
-        .dashboard {
-            display: grid;
-            grid-template-columns: 250px 1fr 300px;
-            grid-template-rows: 1fr auto;
-            gap: 1rem;
-            padding: 1rem;
-            min-height: calc(100vh - 70px);
-        }
-        /* Panels */
-        .panel {
-            background: #111827;
-            border: 1px solid #1e293b;
-            border-radius: 12px;
-            padding: 1rem;
-        }
-        .panel-title {
-            font-size: 0.75rem;
-            font-weight: 600;
-            text-transform: uppercase;
-            color: #64748b;
-            margin-bottom: 1rem;
-            letter-spacing: 0.05em;
-        }
-        /* Market Pulse */
-        .market-pulse {
-            grid-row: span 1;
-        }
-        .fg-value {
-            font-size: 2.5rem;
-            font-weight: 700;
-            margin-bottom: 0.25rem;
-        }
-        .fg-label {
-            font-size: 0.875rem;
-            color: #64748b;
-            margin-bottom: 1.5rem;
-        }
-        .market-stat {
-            display: flex;
-            justify-content: space-between;
-            padding: 0.75rem 0;
-            border-bottom: 1px solid #1e293b;
-        }
-        .market-stat:last-child {
-            border-bottom: none;
-        }
-        .stat-label {
-            color: #64748b;
-            font-size: 0.875rem;
-        }
-        .stat-value {
-            font-weight: 600;
-        }
-        .stat-value.bullish {
-            color: #00ff9d;
-        }
-        /* Live Signals */
-        .live-signals {
-            overflow-y: auto;
-            max-height: 70vh;
-        }
-        .signal-card {
-            background: #0a0e1a;
-            border: 1px solid #1e293b;
-            border-radius: 8px;
-            padding: 1rem;
-            margin-bottom: 0.75rem;
-        }
-        .signal-card.buy {
-            border-left: 3px solid #00ff9d;
-        }
-        .signal-card.sell {
-            border-left: 3px solid #ff4757;
-        }
-        .signal-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            margin-bottom: 0.75rem;
-        }
-        .signal-symbol {
-            font-weight: 600;
-            font-size: 1rem;
-        }
-        .signal-side {
-            padding: 0.25rem 0.5rem;
-            border-radius: 4px;
-            font-size: 0.75rem;
-            font-weight: 600;
-        }
-        .signal-side.buy {
-            background: rgba(0, 255, 157, 0.1);
-            color: #00ff9d;
-        }
-        .signal-side.sell {
-            background: rgba(255, 71, 87, 0.1);
-            color: #ff4757;
-        }
-        .signal-details {
-            display: grid;
-            grid-template-columns: repeat(3, 1fr);
-            gap: 0.5rem;
-            font-size: 0.75rem;
-        }
-        .signal-detail {
-            display: flex;
-            flex-direction: column;
-        }
-        .detail-label {
-            color: #64748b;
-        }
-        .detail-value {
-            font-weight: 500;
-        }
-        /* Bot Controls */
-        .control-group {
-            margin-bottom: 1rem;
-        }
-        .control-label {
-            font-size: 0.75rem;
-            color: #64748b;
-            margin-bottom: 0.25rem;
-        }
-        select, input {
-            width: 100%;
-            padding: 0.5rem;
-            background: #0a0e1a;
-            border: 1px solid #1e293b;
-            border-radius: 6px;
-            color: #e2e8f0;
-            font-size: 0.875rem;
-        }
-        select:focus, input:focus {
-            outline: none;
-            border-color: #00ff9d;
-        }
-        /* Performance Tracker */
-        .performance {
-            grid-column: span 3;
-        }
-        .perf-stats {
-            display: flex;
-            gap: 2rem;
-            margin-bottom: 1rem;
-        }
-        .perf-stat {
-            text-align: center;
-        }
-        .perf-value {
-            font-size: 1.5rem;
-            font-weight: 700;
-        }
-        .perf-label {
-            font-size: 0.75rem;
-            color: #64748b;
-        }
-        .perf-buttons {
-            display: flex;
-            gap: 0.5rem;
-        }
-        .btn-secondary {
-            background: #1e293b;
-            color: #e2e8f0;
-            padding: 0.5rem 1rem;
-            border: none;
-            border-radius: 6px;
-            cursor: pointer;
-            font-size: 0.75rem;
-        }
-        /* Loading state */
-        .loading {
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            padding: 2rem;
-            color: #64748b;
-        }
-    </style>
+    <link rel="stylesheet" href="/static/style.css">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📊</text></svg>">
 </head>
 <body>
+
+    <!-- ========== HEADER ========== -->
     <header class="header">
         <div class="header-left">
             <div class="status-dot" id="status-dot"></div>
             <h1>TradingCore Dashboard</h1>
         </div>
-        <button class="btn btn-stop" id="stop-btn" style="display:none;">■ STOP BOT</button>
-        <button class="btn btn-start" id="start-btn">▶ START BOT</button>
+        <div class="header-right">
+            <button class="btn btn-stop" id="stop-btn" style="display:none;">■ STOP BOT</button>
+            <button class="btn btn-start" id="start-btn">▶ START BOT</button>
+        </div>
     </header>
 
+    <!-- ========== MAIN DASHBOARD ========== -->
     <div class="dashboard">
-        <!-- Market Pulse -->
+
+        <!-- ===== MARKET PULSE (left) ===== -->
         <div class="panel market-pulse">
             <div class="panel-title">Market Pulse</div>
-            <div class="fg-value" id="fg-value">--</div>
-            <div class="fg-label" id="fg-label">Loading...</div>
-            
+
+            <!-- Fear & Greed Gauge -->
+            <div class="fg-gauge-container">
+                <div class="fg-gauge">
+                    <svg viewBox="0 0 140 80">
+                        <path class="fg-gauge-bg"
+                              d="M 10 75 A 60 60 0 0 1 130 75"
+                              stroke-dasharray="188.5"
+                              stroke-dashoffset="0" />
+                        <path class="fg-gauge-fill"
+                              id="fg-gauge-fill"
+                              d="M 10 75 A 60 60 0 0 1 130 75"
+                              stroke-dasharray="188.5"
+                              stroke-dashoffset="188.5" />
+                    </svg>
+                </div>
+                <div class="fg-value" id="fg-value">--</div>
+                <div class="fg-label" id="fg-label">Loading...</div>
+            </div>
+
+            <!-- Market Stats -->
             <div class="market-stat">
                 <span class="stat-label">BTC Dominance</span>
                 <span class="stat-value" id="btc-dom">--</span>
             </div>
             <div class="market-stat">
                 <span class="stat-label">BTC Trend</span>
-                <span class="stat-value bullish" id="btc-trend">↑</span>
+                <span class="stat-value bullish" id="btc-trend">--</span>
             </div>
             <div class="market-stat">
                 <span class="stat-label">Trending</span>
-                <span class="stat-value" id="trending">--</span>
+                <div class="trending-coins" id="trending">
+                    <span class="trending-coin">--</span>
+                </div>
             </div>
         </div>
 
-        <!-- Live Signals -->
+        <!-- ===== LIVE SIGNALS (center) ===== -->
         <div class="panel live-signals">
             <div class="panel-title">Live Signals</div>
             <div id="signals-container">
-                <div class="loading">Loading signals...</div>
+                <div class="loading"><span class="spinner"></span> Loading signals...</div>
             </div>
         </div>
 
-        <!-- Bot Controls -->
+        <!-- ===== BOT CONTROLS (right) ===== -->
         <div class="panel bot-controls">
             <div class="panel-title">Bot Controls</div>
-            
+
             <div class="control-group">
                 <div class="control-label">Mode</div>
                 <select id="mode-select">
@@ -334,9 +123,20 @@
                     <option value="70">70%</option>
                 </select>
             </div>
+
+            <div class="controls-divider"></div>
+
+            <button class="btn btn-start btn-full" onclick="startBot()">▶ START BOT</button>
+            <button class="btn btn-settings btn-full" onclick="openSettingsModal()">⚙ SETTINGS</button>
+
+            <!-- Telegram status indicator -->
+            <div class="tg-status">
+                <div class="tg-status-dot" id="tg-status-dot"></div>
+                <span id="tg-status-text">Checking...</span>
+            </div>
         </div>
 
-        <!-- Performance Tracker -->
+        <!-- ===== PERFORMANCE TRACKER (bottom) ===== -->
         <div class="panel performance">
             <div class="panel-title">Performance Tracker</div>
             <div class="perf-stats">
@@ -366,169 +166,91 @@
                 </div>
             </div>
             <div class="perf-buttons">
-                <button class="btn-secondary">LOG OUTCOME</button>
-                <button class="btn-secondary">VIEW HISTORY</button>
-                <button class="btn-secondary">RUN BACKTEST</button>
-                <button class="btn-secondary">EVOLVE</button>
+                <button class="btn-secondary" onclick="openLogOutcomeModal()">LOG OUTCOME</button>
+                <button class="btn-secondary" onclick="openHistoryModal()">VIEW HISTORY</button>
+                <button class="btn-secondary" onclick="showToast('Backtest coming in Priority 2','info')">RUN BACKTEST</button>
+                <button class="btn-secondary" onclick="showToast('Evolution coming in Priority 4','info')">EVOLVE</button>
             </div>
         </div>
     </div>
 
-    <script>
-        // API Base URL
-        const API_BASE = '';
-        
-        // Load market pulse
-        async function loadMarketPulse() {
-            try {
-                const res = await fetch(`${API_BASE}/api/market/pulse`);
-                const data = await res.json();
-                
-                document.getElementById('fg-value').textContent = data.fear_greed;
-                document.getElementById('fg-label').textContent = data.fear_greed_label;
-                document.getElementById('btc-dom').textContent = data.btc_dominance + '%';
-                document.getElementById('btc-trend').textContent = data.btc_trend === 'bullish' ? '↑' : '↓';
-                document.getElementById('trending').textContent = data.trending.slice(0, 3).join(' ');
-            } catch (e) {
-                console.error('Failed to load market pulse:', e);
-            }
-        }
-        
-        // Load signals
-        async function loadSignals() {
-            try {
-                const res = await fetch(`${API_BASE}/api/signals`);
-                const data = await res.json();
-                
-                const container = document.getElementById('signals-container');
-                
-                if (!data.signals || data.signals.length === 0) {
-                    container.innerHTML = '<div class="loading">No signals yet</div>';
-                    return;
-                }
-                
-                container.innerHTML = data.signals.map(signal => `
-                    <div class="signal-card ${signal.side.toLowerCase()}">
-                        <div class="signal-header">
-                            <span class="signal-symbol">${signal.symbol}</span>
-                            <span class="signal-side ${signal.side.toLowerCase()}">${signal.side}</span>
-                        </div>
-                        <div class="signal-details">
-                            <div class="signal-detail">
-                                <span class="detail-label">RSI</span>
-                                <span class="detail-value">${signal.rsi}</span>
-                            </div>
-                            <div class="signal-detail">
-                                <span class="detail-label">Conf</span>
-                                <span class="detail-value">${signal.confidence}%</span>
-                            </div>
-                            <div class="signal-detail">
-                                <span class="detail-label">Entry</span>
-                                <span class="detail-value">$${signal.entry.toLocaleString()}</span>
-                            </div>
-                            <div class="signal-detail">
-                                <span class="detail-label">SL</span>
-                                <span class="detail-value">-${signal.sl}%</span>
-                            </div>
-                            <div class="signal-detail">
-                                <span class="detail-label">TP</span>
-                                <span class="detail-value">+${signal.tp}%</span>
-                            </div>
-                            <div class="signal-detail">
-                                <span class="detail-label">R:R</span>
-                                <span class="detail-value">1:${signal.rr}</span>
-                            </div>
-                        </div>
+    <!-- ========== SETTINGS MODAL (Telegram) ========== -->
+    <div class="modal-overlay" id="settings-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>⚙ Telegram Settings</h2>
+                <button class="modal-close" onclick="closeSettingsModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="control-group">
+                    <div class="control-label">Bot Token</div>
+                    <input type="password" id="tg-token" placeholder="123456:ABC-DEF...">
+                </div>
+                <div class="control-group">
+                    <div class="control-label">Chat ID</div>
+                    <input type="text" id="tg-chatid" placeholder="-100123456789">
+                </div>
+                <div id="tg-connection-status" class="connection-status pending">
+                    <span>○</span> Not configured
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="testTelegram()" style="flex:1;text-align:center;justify-content:center;">TEST CONNECTION</button>
+                <button class="btn btn-start" onclick="sendTestSignal()" style="flex:1;justify-content:center;">SEND TEST SIGNAL</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== LOG OUTCOME MODAL ========== -->
+    <div class="modal-overlay" id="outcome-modal">
+        <div class="modal">
+            <div class="modal-header">
+                <h2>📝 Log Outcome</h2>
+                <button class="modal-close" onclick="closeLogOutcomeModal()">✕</button>
+            </div>
+            <div class="modal-body">
+                <div class="control-label" style="margin-bottom:0.5rem">Select Signal</div>
+                <div class="outcome-signals" id="outcome-signals">
+                    <div class="loading"><span class="spinner"></span> Loading...</div>
+                </div>
+
+                <div class="outcome-form" id="outcome-form">
+                    <div class="control-label" style="margin-bottom:0.4rem;margin-top:0.5rem;">Outcome</div>
+                    <div class="outcome-btn-group">
+                        <button class="outcome-btn tp" onclick="selectOutcome('TP', this)">✓ TP Hit</button>
+                        <button class="outcome-btn sl" onclick="selectOutcome('SL', this)">✗ SL Hit</button>
+                        <button class="outcome-btn manual" onclick="selectOutcome('MANUAL', this)">◉ Manual</button>
                     </div>
-                `).join('');
-            } catch (e) {
-                console.error('Failed to load signals:', e);
-            }
-        }
-        
-        // Load performance
-        async function loadPerformance() {
-            try {
-                const res = await fetch(`${API_BASE}/api/performance`);
-                const data = await res.json();
-                
-                document.getElementById('total-trades').textContent = data.total_trades;
-                document.getElementById('win-count').textContent = data.wins;
-                document.getElementById('loss-count').textContent = data.losses;
-                document.getElementById('win-rate').textContent = data.win_rate + '%';
-                document.getElementById('best-trade').textContent = data.best_trade ? '+' + data.best_trade.pnl + '%' : '--';
-                document.getElementById('worst-trade').textContent = data.worst_trade ? data.worst_trade.pnl + '%' : '--';
-            } catch (e) {
-                console.error('Failed to load performance:', e);
-            }
-        }
-        
-        // Load bot status
-        async function loadBotStatus() {
-            try {
-                const res = await fetch(`${API_BASE}/api/bot/status`);
-                const data = await res.json();
-                
-                const statusDot = document.getElementById('status-dot');
-                const startBtn = document.getElementById('start-btn');
-                const stopBtn = document.getElementById('stop-btn');
-                
-                if (data.status === 'running') {
-                    statusDot.classList.add('active');
-                    startBtn.style.display = 'none';
-                    stopBtn.style.display = 'block';
-                } else {
-                    statusDot.classList.remove('active');
-                    startBtn.style.display = 'block';
-                    stopBtn.style.display = 'none';
-                }
-            } catch (e) {
-                console.error('Failed to load bot status:', e);
-            }
-        }
-        
-        // Start bot
-        document.getElementById('start-btn').addEventListener('click', async () => {
-            try {
-                const res = await fetch(`${API_BASE}/api/bot/start`, { method: 'POST' });
-                const data = await res.json();
-                
-                if (data.success) {
-                    loadBotStatus();
-                    alert('Bot started!\nMode: ' + data.config.mode + '\nInterval: ' + data.config.interval);
-                }
-            } catch (e) {
-                console.error('Failed to start bot:', e);
-            }
-        });
-        
-        // Stop bot
-        document.getElementById('stop-btn').addEventListener('click', async () => {
-            try {
-                const res = await fetch(`${API_BASE}/api/bot/stop`, { method: 'POST' });
-                const data = await res.json();
-                
-                if (data.success) {
-                    loadBotStatus();
-                    alert('Bot stopped!\n' + data.session_stats.duration);
-                }
-            } catch (e) {
-                console.error('Failed to stop bot:', e);
-            }
-        });
-        
-        // Initialize
-        loadMarketPulse();
-        loadSignals();
-        loadPerformance();
-        loadBotStatus();
-        
-        // Refresh every 30 seconds
-        setInterval(() => {
-            loadMarketPulse();
-            loadSignals();
-            loadPerformance();
-        }, 30000);
-    </script>
+
+                    <div class="control-group">
+                        <div class="control-label">Exit Price (optional)</div>
+                        <input type="number" id="exit-price" placeholder="0.00" step="0.01">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeLogOutcomeModal()" style="flex:1;justify-content:center;">CANCEL</button>
+                <button class="btn btn-start" onclick="submitOutcome()" style="flex:1;justify-content:center;">SAVE OUTCOME</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== HISTORY MODAL ========== -->
+    <div class="modal-overlay" id="history-modal">
+        <div class="modal" style="max-width:560px;">
+            <div class="modal-header">
+                <h2>📈 Trade History</h2>
+                <button class="modal-close" onclick="closeHistoryModal()">✕</button>
+            </div>
+            <div class="modal-body" id="history-content" style="max-height:400px;overflow-y:auto;">
+                <div class="loading"><span class="spinner"></span> Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== TOAST CONTAINER ========== -->
+    <div id="toast-container" class="toast-container"></div>
+
+    <script src="/static/app.js"></script>
 </body>
 </html>

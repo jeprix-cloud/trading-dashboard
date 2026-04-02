@@ -3,6 +3,7 @@ Signals Routes - Get trading signals
 """
 from flask import Blueprint, jsonify, request
 from datetime import datetime
+import os
 import sys
 sys.path.append(os.path.dirname(os.path.dirname(__file__)))
 from services.auth import require_auth
