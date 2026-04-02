@@ -118,7 +118,7 @@ function formatPrice(price) {
     return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
 }
 
-function renderSignalCards(signals) {
+function renderSignalCards(signals, isExample = false, message = '') {
     const container = document.getElementById('signals-container');
     if (!container) return;
 
@@ -126,14 +126,23 @@ function renderSignalCards(signals) {
         container.innerHTML = `
             <div class="empty-state">
                 <div class="empty-state-icon">📡</div>
-                <div class="empty-state-text">No signals yet</div>
-                <div class="empty-state-sub">Start the bot to begin scanning</div>
+                <div class="empty-state-text">${isExample ? 'Example Signals' : 'No signals found'}</div>
+                <div class="empty-state-sub">${message || (isExample ? 'Start the bot to see real signals' : 'RSI is neutral. Check back later.')}</div>
             </div>`;
         return;
     }
 
-    container.innerHTML = '<div class="signals-list">' + signals.map(s => `
-        <div class="signal-card ${s.side.toLowerCase()}" data-id="${s.id || ''}">
+    let header = '';
+    if (isExample) {
+        header = `<div class="signals-header">
+            <span class="example-badge">📋 EXAMPLE</span>
+            <span class="signals-info">Start the bot for real signals</span>
+        </div>`;
+    }
+
+    container.innerHTML = header + '<div class="signals-list">' + signals.map(s => `
+        <div class="signal-card ${s.side.toLowerCase()}${s.is_example ? ' example' : ''}" data-id="${s.id || ''}">
+            ${s.is_example ? '<div class="signal-example-badge">EXAMPLE</div>' : ''}
             <div class="signal-header">
                 <span class="signal-symbol">${s.symbol}</span>
                 <span class="signal-side ${s.side.toLowerCase()}">${s.side}</span>
@@ -171,7 +180,7 @@ function renderSignalCards(signals) {
 async function refreshSignals() {
     const data = await apiFetch('/api/signals');
     if (!data) return;
-    renderSignalCards(data.signals || []);
+    renderSignalCards(data.signals || [], data.is_example || false, data.message || '');
 }
 
 // ============================================

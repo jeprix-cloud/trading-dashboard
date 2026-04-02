@@ -1328,3 +1328,50 @@ select option {
     flex-direction: column;
     gap: 0.15rem;
 }
+
+/* ========== EXAMPLE SIGNALS ========== */
+.signals-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.5rem 0.75rem;
+    margin-bottom: 0.75rem;
+    background: rgba(255, 215, 0, 0.1);
+    border: 1px solid rgba(255, 215, 0, 0.3);
+    border-radius: var(--radius-md);
+}
+
+.example-badge {
+    font-size: 0.7rem;
+    font-weight: 700;
+    color: var(--accent-yellow);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.signals-info {
+    font-size: 0.7rem;
+    color: var(--text-secondary);
+}
+
+.signal-card.example {
+    opacity: 0.75;
+    border-style: dashed;
+}
+
+.signal-example-badge {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    font-size: 0.6rem;
+    font-weight: 700;
+    color: var(--accent-yellow);
+    background: rgba(255, 215, 0, 0.15);
+    padding: 0.15rem 0.4rem;
+    border-radius: 3px;
+    text-transform: uppercase;
+}
+
+.signal-card {
+    position: relative;
+}
