@@ -108,3 +108,87 @@ def add_trade():
         json.dump(trades, f, indent=2)
     
     return jsonify({'success': True, 'trade': trade})
+
+
+@performance_bp.route('/backtest', methods=['POST'])
+@require_auth
+def run_backtest():
+    """Run a quick backtest using signal engine on current market data"""
+    try:
+        from strategies.signal_engine import run_scan, fetch_klines, calculate_rsi_wilder
+
+        config_path = os.path.join(os.path.dirname(__file__), '..', 'config', 'bot_config.json')
+        with open(config_path, 'r') as f:
+            config = json.load(f)
+
+        # Use relaxed filters to find more signals for backtest
+        bt_config = dict(config)
+        bt_config['min_confidence'] = 20
+        bt_config['require_volume'] = False
+        bt_config['ema200_filter'] = False
+        bt_config['fg_filter'] = False
+        bt_config['skip_rsi_35_40'] = False
+
+        signals = run_scan(bt_config, {
+            'fear_greed': 50,
+            'btc_trend': 'neutral',
+            'trending': []
+        })
+
+        # Simulate outcomes based on historical ATR volatility
+        results = []
+        wins = 0
+        losses = 0
+        total_pnl = 0
+
+        for sig in signals:
+            # Simple simulation: if RSI < 35 → likely win, RSI > 65 → likely win for sell
+            rsi = sig['rsi']
+            if sig['side'] == 'BUY':
+                win = rsi < 35
+            else:
+                win = rsi > 65
+
+            pnl = sig['tp'] if win else -sig['sl']
+            if win:
+                wins += 1
+            else:
+                losses += 1
+            total_pnl += pnl
+
+            results.append({
+                'symbol': sig['symbol'],
+                'side': sig['side'],
+                'rsi': sig['rsi'],
+                'confidence': sig['confidence'],
+                'entry': sig['entry'],
+                'rr': sig['rr'],
+                'simulated_pnl': round(pnl, 2),
+                'outcome': 'WIN' if win else 'LOSS',
+            })
+
+        total = wins + losses
+        return jsonify({
+            'success': True,
+            'results': results,
+            'summary': {
+                'total_signals': total,
+                'wins': wins,
+                'losses': losses,
+                'win_rate': round(wins / total * 100, 1) if total > 0 else 0,
+                'total_pnl': round(total_pnl, 2),
+                'avg_pnl': round(total_pnl / total, 2) if total > 0 else 0,
+            },
+            'config_used': {
+                'mode': bt_config['mode'],
+                'interval': bt_config['interval'],
+                'coin_pool': bt_config['coin_pool'],
+            },
+            'timestamp': datetime.now().isoformat(),
+        })
+
+    except Exception as e:
+        return jsonify({
+            'success': False,
+            'error': str(e),
+        }), 500

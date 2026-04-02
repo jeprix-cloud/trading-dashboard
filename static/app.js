@@ -490,6 +490,68 @@ async function loadHistory() {
 }
 
 // ============================================
+// BACKTEST
+// ============================================
+function openBacktestModal() {
+    const overlay = document.getElementById('backtest-modal');
+    if (overlay) overlay.classList.add('show');
+}
+
+function closeBacktestModal() {
+    const overlay = document.getElementById('backtest-modal');
+    if (overlay) overlay.classList.remove('show');
+}
+
+async function runBacktest() {
+    openBacktestModal();
+    const container = document.getElementById('backtest-content');
+    if (container) container.innerHTML = '<div class="loading"><span class="spinner"></span> Scanning coins & running backtest...</div>';
+
+    showToast('Running backtest...', 'info');
+    const data = await apiPost('/api/performance/backtest');
+
+    if (!data || !data.success) {
+        if (container) container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">${data?.error || 'Backtest failed'}</div></div>`;
+        showToast('Backtest failed', 'error');
+        return;
+    }
+
+    const s = data.summary;
+    const results = data.results || [];
+
+    let html = `
+        <div class="perf-stats" style="margin-bottom:1rem;">
+            <div class="perf-stat"><div class="perf-value">${s.total_signals}</div><div class="perf-label">Signals</div></div>
+            <div class="perf-stat"><div class="perf-value positive">${s.wins}</div><div class="perf-label">Wins</div></div>
+            <div class="perf-stat"><div class="perf-value negative">${s.losses}</div><div class="perf-label">Losses</div></div>
+            <div class="perf-stat"><div class="perf-value">${s.win_rate}%</div><div class="perf-label">Win Rate</div></div>
+            <div class="perf-stat"><div class="perf-value ${s.total_pnl >= 0 ? 'positive' : 'negative'}">${s.total_pnl >= 0 ? '+' : ''}${s.total_pnl}%</div><div class="perf-label">Total PnL</div></div>
+        </div>`;
+
+    if (results.length === 0) {
+        html += '<div class="empty-state"><div class="empty-state-text">No signals found in current market</div><div class="empty-state-sub">Try again later when market conditions change</div></div>';
+    } else {
+        html += `<table class="history-table"><thead><tr><th>Symbol</th><th>Side</th><th>RSI</th><th>Conf</th><th>PnL</th><th>Result</th></tr></thead><tbody>`;
+        for (const r of results) {
+            html += `<tr>
+                <td>${r.symbol}</td>
+                <td><span class="signal-side ${r.side.toLowerCase()}" style="font-size:0.65rem">${r.side}</span></td>
+                <td>${r.rsi}</td>
+                <td>${r.confidence}%</td>
+                <td style="color:${r.simulated_pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">${r.simulated_pnl >= 0 ? '+' : ''}${r.simulated_pnl}%</td>
+                <td style="color:${r.outcome === 'WIN' ? 'var(--accent-green)' : 'var(--accent-red)'}">${r.outcome}</td>
+            </tr>`;
+        }
+        html += '</tbody></table>';
+    }
+
+    html += `<div style="margin-top:0.75rem;font-size:0.7rem;color:var(--text-muted)">Config: ${data.config_used.mode} / ${data.config_used.interval} / Top ${data.config_used.coin_pool}</div>`;
+
+    if (container) container.innerHTML = html;
+    showToast(`Backtest done: ${s.total_signals} signals, ${s.win_rate}% win rate`, 'success');
+}
+
+// ============================================
 // REFRESH ALL
 // ============================================
 function refreshAll() {

@@ -168,7 +168,7 @@
             <div class="perf-buttons">
                 <button class="btn-secondary" onclick="openLogOutcomeModal()">LOG OUTCOME</button>
                 <button class="btn-secondary" onclick="openHistoryModal()">VIEW HISTORY</button>
-                <button class="btn-secondary" onclick="showToast('Backtest coming in Priority 2','info')">RUN BACKTEST</button>
+                <button class="btn-secondary" onclick="runBacktest()">RUN BACKTEST</button>
                 <button class="btn-secondary" onclick="showToast('Evolution coming in Priority 4','info')">EVOLVE</button>
             </div>
         </div>
@@ -244,6 +244,19 @@
             </div>
             <div class="modal-body" id="history-content" style="max-height:400px;overflow-y:auto;">
                 <div class="loading"><span class="spinner"></span> Loading...</div>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== BACKTEST MODAL ========== -->
+    <div class="modal-overlay" id="backtest-modal">
+        <div class="modal" style="max-width:560px;">
+            <div class="modal-header">
+                <h2>🧪 Backtest Results</h2>
+                <button class="modal-close" onclick="closeBacktestModal()">✕</button>
+            </div>
+            <div class="modal-body" id="backtest-content" style="max-height:450px;overflow-y:auto;">
+                <div class="loading"><span class="spinner"></span> Running backtest...</div>
             </div>
         </div>
     </div>
