@@ -14,6 +14,7 @@ from routes.learning import learning_bp
 from routes.binance import binance_bp
 from routes.strategies import strategies_bp
 from routes.backtest import backtest_bp
+from routes.positions import positions_bp
 from services.auth import require_auth, is_authenticated, SESSION_SECRET
 from services.database import init_db
 
@@ -41,6 +42,7 @@ app.register_blueprint(learning_bp, url_prefix='/api/learning')
 app.register_blueprint(binance_bp, url_prefix='/api/binance')
 app.register_blueprint(strategies_bp, url_prefix='/api/strategies')
 app.register_blueprint(backtest_bp, url_prefix='/api/backtest')
+app.register_blueprint(positions_bp, url_prefix='/api/positions')
 
 
 @app.route('/')

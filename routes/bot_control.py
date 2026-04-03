@@ -186,6 +186,23 @@ def scan_job():
 
 
 # ============================================================
+# Position Checker Job
+# ============================================================
+def check_positions_job():
+    """Check open positions for SL/TP hits — runs every 30 seconds"""
+    from services.position_manager import check_open_positions
+    
+    try:
+        updates = check_open_positions()
+        if updates:
+            print(f"[Bot] 📋 Position updates: {len(updates)}")
+            for update in updates:
+                print(f"  - {update['symbol']} {update['side']}: {update['reason']} @ {update['exit_price']}, PnL: {update['pnl_pct']:.2f}%")
+    except Exception as e:
+        print(f"[Bot] ❌ Position check error: {e}")
+
+
+# ============================================================
 # Routes
 # ============================================================
 @bot_bp.route('/status', methods=['GET'])
@@ -239,6 +256,15 @@ def start_bot():
         id=SCAN_JOB_ID,
         name='Trading Scan',
         replace_existing=True,
+    )
+
+    # Schedule position checker (every 30 seconds)
+    scheduler.add_job(
+        check_positions_job,
+        'interval',
+        seconds=30,
+        id='position_checker',
+        replace_existing=True
     )
 
     # Update status
@@ -298,6 +324,12 @@ def stop_bot():
     # Also remove immediate scan if pending
     try:
         scheduler.remove_job('immediate_scan')
+    except Exception:
+        pass
+
+    # Remove position checker job
+    try:
+        scheduler.remove_job('position_checker')
     except Exception:
         pass
 

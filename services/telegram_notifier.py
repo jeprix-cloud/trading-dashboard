@@ -243,3 +243,39 @@ def notify_daily_summary(performance, config=None):
     message = format_daily_summary(performance)
     return send_message(message)
 
+
+
+def notify_position_closed(position):
+    """Send Telegram when a position is closed (SL/TP/Manual)"""
+    try:
+        config = load_config()
+        if not config.get('enabled'):
+            return
+        
+        status = position.get('status', 'UNKNOWN')
+        symbol = position.get('symbol', '')
+        side = position.get('side', '')
+        pnl_pct = position.get('pnl_pct', 0)
+        exit_price = position.get('exit_price', 0)
+        entry_price = position.get('entry_price', 0)
+        
+        if status == 'TP':
+            msg = f"🎯 Take Profit Hit!\n\n"
+        elif status == 'SL':
+            msg = f"🛑 Stop Loss Hit!\n\n"
+        else:
+            msg = f"📤 Position Closed\n\n"
+        
+        msg += f"{symbol} {side}\n"
+        msg += f"Entry: {entry_price:.4f}\n"
+        msg += f"Exit: {exit_price:.4f}\n"
+        msg += f"PnL: {pnl_pct:+.4f}%"
+        
+        if pnl_pct > 0:
+            msg += " ✅"
+        else:
+            msg += " ❌"
+        
+        send_message(msg, config.get('alert_bot_token'), config.get('alert_chat_id'))
+    except Exception as e:
+        print(f"[Telegram] notify_position_closed error: {e}")
