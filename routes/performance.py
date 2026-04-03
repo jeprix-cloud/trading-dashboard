@@ -1,5 +1,5 @@
 """
-Performance Routes - Win rate, trade history
+Performance Routes - Win rate, trade history from SQLite
 """
 from flask import Blueprint, jsonify, request
 from datetime import datetime, timedelta
@@ -11,40 +11,46 @@ from services.auth import require_auth
 
 performance_bp = Blueprint('performance', __name__)
 
-TRADES_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'trades.json')
-
-
-def get_trades():
-    """Get all trades from file (no mock data)"""
-    if os.path.exists(TRADES_PATH):
-        with open(TRADES_PATH, 'r') as f:
-            return json.load(f)
-    return []
-
 
 @performance_bp.route('', methods=['GET'])
 @require_auth
 def get_performance():
-    """Get overall performance stats"""
-    trades = get_trades()
+    """Get overall performance stats from SQLite positions table"""
+    from services.database import get_db
     
-    if not trades:
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    # Get closed positions
+    cursor.execute("""
+        SELECT pnl_pct, pnl_usd, side, symbol, status, exit_price, entry_price
+        FROM positions WHERE status != 'OPEN'
+        ORDER BY closed_at DESC
+    """)
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    if not rows:
         return jsonify({
             'total_trades': 0, 'wins': 0, 'losses': 0, 'win_rate': 0,
             'best_trade': None, 'worst_trade': None, 'avg_pnl': 0
         })
     
-    wins = [t for t in trades if t['outcome'] in ['TP', 'MANUAL'] and t['pnl_pct'] > 0]
-    losses = [t for t in trades if t['outcome'] in ['SL', 'MANUAL'] and t['pnl_pct'] < 0]
-    best = max(trades, key=lambda t: t['pnl_pct']) if trades else None
-    worst = min(trades, key=lambda t: t['pnl_pct']) if trades else None
+    wins = [r for r in rows if r['pnl_pct'] and r['pnl_pct'] > 0]
+    losses = [r for r in rows if r['pnl_pct'] and r['pnl_pct'] <= 0]
+    
+    best = max(rows, key=lambda r: r['pnl_pct'] or 0) if rows else None
+    worst = min(rows, key=lambda r: r['pnl_pct'] or 0) if rows else None
     
     return jsonify({
-        'total_trades': len(trades), 'wins': len(wins), 'losses': len(losses),
-        'win_rate': round(len(wins) / len(trades) * 100, 1) if trades else 0,
+        'total_trades': len(rows),
+        'wins': len(wins),
+        'losses': len(losses),
+        'win_rate': round(len(wins) / len(rows) * 100, 1) if rows else 0,
         'best_trade': {'symbol': best['symbol'], 'pnl': best['pnl_pct']} if best else None,
         'worst_trade': {'symbol': worst['symbol'], 'pnl': worst['pnl_pct']} if worst else None,
-        'avg_pnl': round(sum(t['pnl_pct'] for t in trades) / len(trades), 2) if trades else 0,
+        'avg_pnl': round(sum(r['pnl_pct'] or 0 for r in rows) / len(rows), 2) if rows else 0,
         'timestamp': datetime.now().isoformat()
     })
 
@@ -52,34 +58,84 @@ def get_performance():
 @performance_bp.route('/history', methods=['GET'])
 @require_auth
 def get_history():
-    """Get trade history"""
-    trades = get_trades()
+    """Get trade history from positions table"""
+    from services.database import get_db
+    
+    limit = request.args.get('limit', 50, type=int)
+    
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute("""
+        SELECT id, symbol, side, entry_price, exit_price, quantity,
+               pnl_pct, pnl_usd, status, opened_at, closed_at, notes
+        FROM positions WHERE status != 'OPEN'
+        ORDER BY closed_at DESC LIMIT ?
+    """, (limit,))
+    
+    rows = cursor.fetchall()
+    conn.close()
+    
+    trades = []
+    for row in rows:
+        trades.append({
+            'id': row['id'],
+            'symbol': row['symbol'],
+            'side': row['side'],
+            'entry': row['entry_price'],
+            'exit': row['exit_price'],
+            'quantity': row['quantity'],
+            'pnl_pct': row['pnl_pct'],
+            'pnl_usd': row['pnl_usd'],
+            'status': row['status'],
+            'opened_at': row['opened_at'],
+            'closed_at': row['closed_at'],
+            'notes': row['notes']
+        })
+    
     return jsonify({'trades': trades, 'count': len(trades)})
 
 
 @performance_bp.route('/trade', methods=['POST'])
 @require_auth
 def add_trade():
-    """Add a new trade"""
+    """Add a new trade to positions table"""
+    from services.database import get_db
+    
     data = request.get_json()
-    trades = get_trades()
     
-    trade = {
-        'id': f'trade_{len(trades) + 1:03d}',
-        'symbol': data.get('symbol'), 'side': data.get('side'),
-        'entry': data.get('entry'), 'exit': data.get('exit'),
-        'pnl_pct': data.get('pnl_pct'), 'outcome': data.get('outcome'),
-        'mode': data.get('mode', 'SWING'),
-        'opened_at': data.get('opened_at', datetime.now().isoformat()),
-        'closed_at': datetime.now().isoformat()
-    }
+    if not data:
+        return jsonify({'success': False, 'error': 'No data provided'}), 400
     
-    trades.append(trade)
-    os.makedirs(os.path.dirname(TRADES_PATH), exist_ok=True)
-    with open(TRADES_PATH, 'w') as f:
-        json.dump(trades, f, indent=2)
+    required = ['symbol', 'side', 'entry_price', 'quantity']
+    for field in required:
+        if field not in data:
+            return jsonify({'success': False, 'error': f'{field} is required'}), 400
     
-    return jsonify({'success': True, 'trade': trade})
+    conn = get_db()
+    cursor = conn.cursor()
+    
+    cursor.execute('''
+        INSERT INTO positions (
+            symbol, side, entry_price, quantity,
+            sl_pct, tp_pct, status, opened_at
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?)
+    ''', (
+        data['symbol'],
+        data['side'],
+        data['entry_price'],
+        data['quantity'],
+        data.get('sl_pct', 2.5),
+        data.get('tp_pct', 7.5),
+        'OPEN',
+        datetime.now().isoformat()
+    ))
+    
+    trade_id = cursor.lastrowid
+    conn.commit()
+    conn.close()
+    
+    return jsonify({'success': True, 'trade_id': trade_id}), 201
 
 
 @performance_bp.route('/backtest', methods=['POST'])
