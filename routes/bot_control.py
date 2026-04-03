@@ -117,11 +117,30 @@ def scan_job():
     status = read_json(STATUS_PATH)
     market_data = get_market_data()
 
-    try:
-        signals = run_scan(config, market_data)
-    except Exception as e:
-        print(f"[Bot] ❌ Scan error: {e}")
-        signals = []
+    # Check if any strategies are active
+    from services.database import get_db
+    conn = get_db()
+    cursor = conn.cursor()
+    cursor.execute("SELECT COUNT(*) FROM strategies WHERE is_active = 1")
+    active_strategies_count = cursor.fetchone()[0]
+    conn.close()
+
+    if active_strategies_count > 0:
+        # Use strategy engine for active strategies
+        try:
+            from strategies.strategy_engine import scan_all_active_strategies
+            signals = scan_all_active_strategies(market_data)
+            print(f"[Bot] Strategy scan: {len(signals)} signals from {active_strategies_count} active strategies")
+        except Exception as e:
+            print(f"[Bot] ❌ Strategy scan error: {e}")
+            signals = []
+    else:
+        # Fallback to legacy scan using config
+        try:
+            signals = run_scan(config, market_data)
+        except Exception as e:
+            print(f"[Bot] ❌ Scan error: {e}")
+            signals = []
 
     # Apply learning system (if enabled)
     if config.get('apply_lessons', True) and signals:

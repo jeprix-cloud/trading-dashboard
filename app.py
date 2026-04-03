@@ -12,6 +12,7 @@ from routes.telegram import telegram_bp
 from routes.auth import auth_bp
 from routes.learning import learning_bp
 from routes.binance import binance_bp
+from routes.strategies import strategies_bp
 from services.auth import require_auth, is_authenticated, SESSION_SECRET
 from services.database import init_db
 
@@ -19,6 +20,10 @@ app = Flask(__name__)
 
 # Initialize database on startup
 init_db()
+
+# Seed strategy templates
+from strategies.strategy_templates import seed_templates
+seed_templates()
 app.secret_key = SESSION_SECRET
 app.config['JSON_SORT_KEYS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours
@@ -33,6 +38,7 @@ app.register_blueprint(telegram_bp, url_prefix='/api/telegram')
 app.register_blueprint(auth_bp)
 app.register_blueprint(learning_bp, url_prefix='/api/learning')
 app.register_blueprint(binance_bp, url_prefix='/api/binance')
+app.register_blueprint(strategies_bp, url_prefix='/api/strategies')
 
 
 @app.route('/')
