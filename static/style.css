@@ -1375,3 +1375,84 @@ select option {
 .signal-card {
     position: relative;
 }
+
+/* ========== WATCHLIST PANEL ========== */
+.watchlist-panel {
+    grid-column: 1;
+    margin-top: 0;
+}
+
+.watchlist-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 0.6rem 0.75rem;
+    border-bottom: 1px solid var(--border);
+    transition: background 0.15s;
+}
+
+.watchlist-item:last-child {
+    border-bottom: none;
+}
+
+.watchlist-item:hover {
+    background: rgba(255, 255, 255, 0.03);
+}
+
+.watchlist-coin {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex: 1;
+}
+
+.watchlist-name {
+    font-weight: 600;
+    font-size: 0.8rem;
+}
+
+.watchlist-symbol {
+    font-size: 0.65rem;
+    color: var(--text-muted);
+}
+
+.watchlist-price {
+    font-family: 'JetBrains Mono', monospace;
+    font-weight: 600;
+    font-size: 0.8rem;
+    text-align: right;
+    min-width: 80px;
+}
+
+.watchlist-change {
+    font-size: 0.7rem;
+    font-weight: 600;
+    min-width: 60px;
+    text-align: right;
+    padding: 0.2rem 0.4rem;
+    border-radius: 4px;
+}
+
+.watchlist-change.up {
+    color: var(--accent-green);
+    background: rgba(0, 255, 157, 0.1);
+}
+
+.watchlist-change.down {
+    color: var(--accent-red);
+    background: rgba(255, 71, 87, 0.1);
+}
+
+.watchlist-change.neutral {
+    color: var(--text-muted);
+    background: rgba(100, 116, 139, 0.1);
+}
+
+.watchlist-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 0.5rem;
+    padding-bottom: 0.5rem;
+    border-bottom: 1px solid var(--border);
+}
