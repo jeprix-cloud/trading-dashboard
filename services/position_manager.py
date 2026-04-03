@@ -94,6 +94,13 @@ def close_position(position_id, exit_price, reason='MANUAL_CLOSE'):
     updated = dict(cursor.fetchone())
     conn.close()
     
+    # Update risk state after position close
+    try:
+        from services.risk_manager import after_position_closed
+        after_position_closed(updated)
+    except Exception as e:
+        print(f"[Position Manager] Risk update failed: {e}")
+    
     return updated
 
 
