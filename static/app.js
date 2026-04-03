@@ -1084,13 +1084,13 @@ async function refreshPositions() {
     const positions = resp.positions || [];
     
     if (positions.length === 0) {
-        panel.style.display = positions.length > 0 ? 'block' : 'none';
+        panel.classList.remove('visible');
         badge.textContent = '0';
         container.innerHTML = '<div class="empty-state">No open positions</div>';
         return;
     }
     
-    panel.style.display = 'block';
+    panel.classList.add('visible');
     badge.textContent = positions.length;
     
     let html = '';
