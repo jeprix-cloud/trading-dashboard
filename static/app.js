@@ -126,6 +126,41 @@ async function refreshMarket() {
 }
 
 // ============================================
+// WATCHLIST PRICES
+// ============================================
+async function refreshWatchlist() {
+    const container = document.getElementById('watchlist-container');
+    if (!container) return;
+
+    const data = await apiFetch('/api/market/prices');
+    if (!data || !data.prices || data.prices.length === 0) {
+        if (container) {
+            container.innerHTML = '<div class="empty-state"><div class="empty-state-text">No prices available</div></div>';
+        }
+        return;
+    }
+
+    const html = data.prices.map(coin => {
+        const changeClass = coin.change_24h > 0 ? 'up' : coin.change_24h < 0 ? 'down' : 'neutral';
+        const sign = coin.change_24h >= 0 ? '+' : '';
+        const price = formatPrice(coin.price);
+        return `
+        <div class="watchlist-item">
+            <div class="watchlist-coin">
+                <div>
+                    <div class="watchlist-name">${coin.name || coin.short}</div>
+                    <div class="watchlist-symbol">${coin.short}</div>
+                </div>
+            </div>
+            <div class="watchlist-price">${price}</div>
+            <div class="watchlist-change ${changeClass}">${sign}${coin.change_24h?.toFixed(2) || '0.00'}%</div>
+        </div>`;
+    }).join('');
+
+    if (container) container.innerHTML = html;
+}
+
+// ============================================
 // LIVE SIGNALS
 // ============================================
 function formatPrice(price) {
@@ -981,6 +1016,7 @@ async function confirmExecute() {
 // ============================================
 function refreshAll() {
     refreshMarket();
+    refreshWatchlist();
     refreshSignals();
     refreshPerformance();
     refreshBotStatus();
