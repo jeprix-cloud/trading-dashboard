@@ -210,8 +210,12 @@ def get_balances():
 
 @binance_bp.route('/execute', methods=['POST'])
 @require_auth
-def execute_signal():
-    """Execute a trading signal manually"""
+def execute_signal_endpoint():
+    """
+    Execute a trading signal (from signal engine or manual).
+    Uses binance_executor for actual order placement.
+    In semi_auto mode, requires confirmed=True in body.
+    """
     data = request.get_json()
     signal = data.get('signal', {})
     
@@ -224,40 +228,67 @@ def execute_signal():
             'error': 'Execution is disabled. Set mode to semi_auto or full_auto'
         }), 400
     
-    if execution_mode == 'semi_auto':
+    if execution_mode == 'semi_auto' and not data.get('confirmed'):
         # Semi-auto: require confirmation
-        confirmed = data.get('confirmed', False)
-        if not confirmed:
-            return jsonify({
-                'success': False,
-                'needs_confirmation': True,
-                'message': 'This is a SIMULATED execution. Do you want to proceed?',
-                'signal': signal
-            }), 202
-    
-    # Execute
-    api_key = config.get('binance_api_key', '')
-    secret_key = config.get('binance_secret_key', '')
-    
-    try:
-        client = BinanceClient(api_key, secret_key)
-        
-        symbol = signal.get('symbol', '').replace('/', '')
-        side = signal.get('side', 'BUY').upper()
-        quantity = data.get('quantity', 0)
-        
-        if side == 'BUY':
-            result = client.place_market_buy(symbol, quantity)
-        else:
-            result = client.place_market_sell(symbol, quantity)
-        
-        return jsonify({
-            'success': True,
-            'message': f'{side} order executed',
-            'order': result
-        })
-    except Exception as e:
         return jsonify({
             'success': False,
-            'error': str(e)
-        }), 400
+            'needs_confirmation': True,
+            'message': 'This is a LIVE execution. Do you want to proceed?',
+            'signal': signal
+        }), 202
+    
+    # Execute using binance_executor
+    from services.binance_executor import execute_signal
+    result = execute_signal(signal, config)
+    
+    if not result.get('success'):
+        return jsonify({'success': False, 'error': result.get('error')}), 400
+    
+    return jsonify({
+        'success': True,
+        'message': f"Order executed: {result['side']} {result['quantity']} {result['symbol']}",
+        'order_id': result.get('order_id'),
+        'entry_price': result.get('entry_price'),
+        'mode': result.get('mode')
+    })
+
+
+@binance_bp.route('/set-testnet', methods=['POST'])
+@require_auth
+def set_testnet():
+    """Toggle testnet mode on/off"""
+    data = request.get_json()
+    use_testnet = bool(data.get('enabled', True))
+    
+    config = load_config()
+    config['use_testnet'] = use_testnet
+    save_config(config)
+    
+    return jsonify({
+        'success': True,
+        'message': f"Testnet {'enabled' if use_testnet else 'disabled'}",
+        'testnet': use_testnet
+    })
+
+
+@binance_bp.route('/testnet/save', methods=['POST'])
+@require_auth
+def save_testnet_keys():
+    """Save testnet API keys"""
+    data = request.get_json()
+    api_key = data.get('api_key', '').strip()
+    secret_key = data.get('secret_key', '').strip()
+    
+    if not api_key or not secret_key:
+        return jsonify({'success': False, 'error': 'API Key and Secret Key required'}), 400
+    
+    config = load_config()
+    config['testnet_api_key'] = api_key
+    config['testnet_secret_key'] = secret_key
+    config['use_testnet'] = True
+    save_config(config)
+    
+    return jsonify({
+        'success': True,
+        'message': 'Testnet keys saved, testnet enabled'
+    })

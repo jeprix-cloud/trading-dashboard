@@ -161,6 +161,36 @@ def scan_job():
         'scanned_at': datetime.now().isoformat(),
     })
 
+    # Also save signals to SQLite signals table
+    if signals:
+        try:
+            from services.database import get_db
+            conn = get_db()
+            cursor = conn.cursor()
+            for sig in signals:
+                cursor.execute('''
+                    INSERT OR REPLACE INTO signals (
+                        id, strategy_id, symbol, side, exchange,
+                        rsi, confidence, entry_price, sl_pct, tp_pct,
+                        rr_ratio, atr, vwap, volume_ratio, mode, pattern,
+                        indicators_json, status, created_at
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (
+                    sig.get('id'), sig.get('strategy_id'), sig.get('symbol', '').replace('/', ''),
+                    sig.get('side'), sig.get('exchange', 'spot'),
+                    sig.get('rsi'), sig.get('confidence'), sig.get('entry_price'),
+                    sig.get('sl_pct'), sig.get('tp_pct'), sig.get('rr_ratio'),
+                    sig.get('atr'), sig.get('vwap'), sig.get('volume_ratio'),
+                    sig.get('mode'), sig.get('pattern'),
+                    sig.get('indicators_json', '{}'),
+                    'ACTIVE', datetime.now().isoformat()
+                ))
+            conn.commit()
+            conn.close()
+            print(f"[Bot] 💾 Saved {len(signals)} signals to database")
+        except Exception as e:
+            print(f"[Bot] ⚠️ Failed to save signals to DB: {e}")
+
     # Update status
     status['scans_performed'] = status.get('scans_performed', 0) + 1
     status['last_scan_at'] = datetime.now().isoformat()
