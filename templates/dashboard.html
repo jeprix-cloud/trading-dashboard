@@ -91,6 +91,60 @@
             </div>
         </div>
 
+        <!-- ===== POSITIONS PANEL ===== -->
+        <div class="panel positions-panel" id="positions-panel" style="display:none;">
+            <div class="panel-title">📌 Open Positions <span id="position-count-badge" class="badge">0</span></div>
+            <div id="positions-container">
+                <div class="empty-state">No open positions</div>
+            </div>
+            <div class="panel-footer">
+                <button class="btn-xs" onclick="checkPositions()">CHECK SL/TP</button>
+                <button class="btn-xs" onclick="refreshPositions()">↻</button>
+            </div>
+        </div>
+
+        <!-- ===== RISK STATUS PANEL ===== -->
+        <div class="panel risk-panel">
+            <div class="panel-title">⚠️ Risk Status</div>
+            <div class="risk-summary" id="risk-summary">
+                <div class="risk-item">
+                    <span class="risk-label">Circuit Breaker</span>
+                    <span class="risk-value safe" id="cb-status">✅ OFF</span>
+                </div>
+                <div class="risk-item">
+                    <span class="risk-label">Daily Loss</span>
+                    <span class="risk-value" id="daily-loss">0% / 5%</span>
+                </div>
+                <div class="risk-item">
+                    <span class="risk-label">Weekly Loss</span>
+                    <span class="risk-value" id="weekly-loss">0% / 10%</span>
+                </div>
+                <div class="risk-item">
+                    <span class="risk-label">Open Positions</span>
+                    <span class="risk-value" id="open-positions-risk">0 / 3</span>
+                </div>
+                <div class="risk-item">
+                    <span class="risk-label">Total Invested</span>
+                    <span class="risk-value" id="total-invested">$0</span>
+                </div>
+            </div>
+            <div class="risk-actions">
+                <button class="btn-xs btn-danger" onclick="resetCircuitBreaker()" id="cb-reset-btn" style="display:none;">RESET CB</button>
+            </div>
+        </div>
+
+        <!-- ===== STRATEGIES PANEL ===== -->
+        <div class="panel strategies-panel">
+            <div class="panel-title">🎯 Strategies</div>
+            <div id="strategies-container">
+                <div class="loading"><span class="spinner"></span> Loading...</div>
+            </div>
+            <div class="panel-footer">
+                <button class="btn-xs" onclick="openStrategyModal()">+ NEW</button>
+                <button class="btn-xs" onclick="openTemplatesModal()">📋 TEMPLATES</button>
+            </div>
+        </div>
+
         <!-- ===== BOT CONTROLS (right) ===== -->
         <div class="panel bot-controls">
             <div class="panel-title">Bot Controls</div>
@@ -381,6 +435,82 @@
 
     <!-- ========== TOAST CONTAINER ========== -->
     <div id="toast-container" class="toast-container"></div>
+
+    <!-- ========== STRATEGY MODAL ========== -->
+    <div class="modal-overlay" id="strategy-modal">
+        <div class="modal" style="max-width:560px;">
+            <div class="modal-header">
+                <h2>🎯 Strategy Builder</h2>
+                <button class="modal-close" onclick="closeStrategyModal()">✕</button>
+            </div>
+            <div class="modal-body" style="max-height:450px;overflow-y:auto;">
+                <div class="control-group">
+                    <div class="control-label">Strategy Name</div>
+                    <input type="text" id="str-name" placeholder="My RSI Strategy">
+                </div>
+                <div class="control-group">
+                    <div class="control-label">Coins (comma separated)</div>
+                    <input type="text" id="str-coins" placeholder="BTCUSDT, ETHUSDT, SOLUSDT">
+                </div>
+                <div class="control-group">
+                    <div class="control-label">Mode</div>
+                    <select id="str-mode">
+                        <option value="SWING">SWING</option>
+                        <option value="SCALP">SCALP</option>
+                    </select>
+                </div>
+                <div class="control-group">
+                    <div class="control-label">Timeframe</div>
+                    <select id="str-timeframe">
+                        <option value="1m">1 min</option>
+                        <option value="5m">5 min</option>
+                        <option value="15m">15 min</option>
+                        <option value="1h" selected>1 hour</option>
+                        <option value="4h">4 hours</option>
+                    </select>
+                </div>
+                <div class="entry-exit-section">
+                    <div class="control-label">Entry Conditions (JSON)</div>
+                    <textarea id="str-entry" rows="4" placeholder='[{"indicator":"RSI","period":14,"operator":"<","value":30}]'></textarea>
+                </div>
+                <div class="entry-exit-section">
+                    <div class="control-label">Exit Conditions (JSON)</div>
+                    <textarea id="str-exit" rows="3" placeholder='[{"indicator":"RSI","period":14,"operator":">","value":70}]'></textarea>
+                </div>
+                <div class="control-group">
+                    <div class="control-label">SL % / TP %</div>
+                    <div style="display:flex;gap:0.5rem;">
+                        <input type="number" id="str-sl" placeholder="2.5" style="flex:1;" value="2.5">
+                        <input type="number" id="str-tp" placeholder="7.5" style="flex:1;" value="7.5">
+                    </div>
+                </div>
+                <div class="control-group">
+                    <div class="control-label">Min R:R / Min Confidence</div>
+                    <div style="display:flex;gap:0.5rem;">
+                        <input type="number" id="str-minrr" placeholder="2.0" style="flex:1;" value="2.0">
+                        <input type="number" id="str-minconf" placeholder="50" style="flex:1;" value="50">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-secondary" onclick="closeStrategyModal()" style="flex:1;justify-content:center;">CANCEL</button>
+                <button class="btn btn-start" onclick="saveStrategy()" style="flex:1;justify-content:center;">CREATE STRATEGY</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- ========== TEMPLATES MODAL ========== -->
+    <div class="modal-overlay" id="templates-modal">
+        <div class="modal" style="max-width:600px;">
+            <div class="modal-header">
+                <h2>📋 Strategy Templates</h2>
+                <button class="modal-close" onclick="closeTemplatesModal()">✕</button>
+            </div>
+            <div class="modal-body" style="max-height:450px;overflow-y:auto;" id="templates-content">
+                <div class="loading"><span class="spinner"></span> Loading templates...</div>
+            </div>
+        </div>
+    </div>
 
     <script src="/static/app.js"></script>
 </body>

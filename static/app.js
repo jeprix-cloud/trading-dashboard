@@ -1069,3 +1069,296 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 });
+
+// ============================================
+// POSITIONS PANEL (Phase 1.7)
+// ============================================
+async function refreshPositions() {
+    const resp = await apiFetch('/api/positions');
+    if (!resp) return;
+    const container = document.getElementById('positions-container');
+    const panel = document.getElementById('positions-panel');
+    const badge = document.getElementById('position-count-badge');
+    
+    if (!container) return;
+    const positions = resp.positions || [];
+    
+    if (positions.length === 0) {
+        panel.style.display = positions.length > 0 ? 'block' : 'none';
+        badge.textContent = '0';
+        container.innerHTML = '<div class="empty-state">No open positions</div>';
+        return;
+    }
+    
+    panel.style.display = 'block';
+    badge.textContent = positions.length;
+    
+    let html = '';
+    positions.forEach(p => {
+        const pnlClass = p.unrealized_pnl_pct >= 0 ? 'profit' : 'loss';
+        html += `<div class="position-item">
+            <div class="position-symbol">${p.symbol} ${p.side}</div>
+            <div class="position-entry">Entry: ${p.entry_price} | Current: ${p.current_price}</div>
+            <div class="position-sl-tp">SL: ${p.sl_price?.toFixed(4)} | TP: ${p.tp_price?.toFixed(4)}</div>
+            <div class="position-pnl ${pnlClass}">${p.unrealized_pnl_pct >= 0 ? '+' : ''}${p.unrealized_pnl_pct?.toFixed(2)}% ($${p.unrealized_pnl_usd?.toFixed(2)})</div>
+            <button class="btn-xs" onclick="closePosition(${p.id})">CLOSE</button>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+async function checkPositions() {
+    const resp = await apiPost('/api/positions/check');
+    if (resp && resp.success) {
+        showToast(`Checked: ${resp.checked} updates`, 'info');
+        refreshPositions();
+    }
+}
+
+async function closePosition(positionId) {
+    if (!confirm('Close this position?')) return;
+    const resp = await apiPost(`/api/positions/${positionId}/close`, {
+        exit_price: 0, // Will use current market price
+        reason: 'MANUAL_CLOSE'
+    });
+    if (resp && resp.success) {
+        showToast('Position closed', 'success');
+        refreshPositions();
+        refreshPerformance();
+    } else {
+        showToast(resp?.error || 'Failed to close', 'error');
+    }
+}
+
+// ============================================
+// RISK STATUS (Phase 1.7)
+// ============================================
+async function refreshRiskStatus() {
+    const resp = await apiFetch('/api/risk/status');
+    if (!resp) return;
+    const r = resp.risk || {};
+    const limits = r.limits || {};
+    
+    // Circuit breaker
+    const cbEl = document.getElementById('cb-status');
+    const cbBtn = document.getElementById('cb-reset-btn');
+    if (cbEl) {
+        if (r.circuit_breaker_active) {
+            cbEl.textContent = '🚨 ON';
+            cbEl.className = 'risk-value danger';
+            if (cbBtn) cbBtn.style.display = 'inline-block';
+        } else {
+            cbEl.textContent = '✅ OFF';
+            cbEl.className = 'risk-value safe';
+            if (cbBtn) cbBtn.style.display = 'none';
+        }
+    }
+    
+    // Daily loss
+    const dlEl = document.getElementById('daily-loss');
+    if (dlEl) dlEl.textContent = `${r.daily_loss_pct || 0}% / ${limits.max_daily_loss_pct || 5}%`;
+    
+    // Weekly loss
+    const wlEl = document.getElementById('weekly-loss');
+    if (wlEl) wlEl.textContent = `${r.weekly_loss_pct || 0}% / ${limits.max_weekly_loss_pct || 10}%`;
+    
+    // Open positions count
+    const opEl = document.getElementById('open-positions-risk');
+    if (opEl) opEl.textContent = `${r.portfolio?.open_count || 0} / ${limits.max_positions || 3}`;
+    
+    // Total invested
+    const tiEl = document.getElementById('total-invested');
+    if (tiEl) tiEl.textContent = `$${r.portfolio?.total_invested_usd || 0}`;
+}
+
+async function resetCircuitBreaker() {
+    if (!confirm('Reset circuit breaker? This will allow new trades.')) return;
+    const resp = await apiPost('/api/risk/circuit-breaker/deactivate');
+    if (resp && resp.success) {
+        showToast('Circuit breaker reset', 'success');
+        refreshRiskStatus();
+    }
+}
+
+// ============================================
+// STRATEGIES PANEL (Phase 1.7)
+// ============================================
+async function refreshStrategies() {
+    const resp = await apiFetch('/api/strategies/');
+    if (!resp) return;
+    const container = document.getElementById('strategies-container');
+    if (!container) return;
+    
+    const strategies = resp.strategies || [];
+    if (strategies.length === 0) {
+        container.innerHTML = '<div class="empty-state">No strategies yet. Create one!</div>';
+        return;
+    }
+    
+    let html = '';
+    strategies.forEach(s => {
+        const activeBadge = s.is_active ? '<span class="badge active">ACTIVE</span>' : '';
+        const mode = s.mode || 'SWING';
+        html += `<div class="strategy-item">
+            <div class="strategy-header">
+                <span class="strategy-name">${s.name}</span>
+                ${activeBadge}
+            </div>
+            <div class="strategy-meta">${mode} | ${s.timeframe || '15m'} | ${s.min_rr || 2}x R:R</div>
+            <div class="strategy-coins">${(s.coins || '').substring(0, 40)}</div>
+            <div class="strategy-actions">
+                ${s.is_active
+                    ? `<button class="btn-xs" onclick="toggleStrategy('${s.id}', 0)">DEACTIVATE</button>`
+                    : `<button class="btn-xs btn-start" onclick="toggleStrategy('${s.id}', 1)">ACTIVATE</button>`
+                }
+                <button class="btn-xs" onclick="deleteStrategy('${s.id}')">DELETE</button>
+            </div>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+async function toggleStrategy(strategyId, activate) {
+    const url = activate ? `/api/strategies/${strategyId}/activate` : `/api/strategies/${strategyId}/deactivate`;
+    const resp = await apiPost(url);
+    if (resp && resp.success) {
+        showToast(activate ? 'Strategy activated' : 'Strategy deactivated', 'success');
+        refreshStrategies();
+    }
+}
+
+async function deleteStrategy(strategyId) {
+    if (!confirm('Delete this strategy?')) return;
+    const resp = await apiFetch(`/api/strategies/${strategyId}`, { method: 'DELETE' });
+    if (resp && resp.success) {
+        showToast('Strategy deleted', 'success');
+        refreshStrategies();
+    }
+}
+
+// ============================================
+// STRATEGY MODAL (Phase 1.7)
+// ============================================
+function openStrategyModal() {
+    document.getElementById('strategy-modal').classList.add('show');
+    // Clear form
+    document.getElementById('str-name').value = '';
+    document.getElementById('str-coins').value = 'BTCUSDT, ETHUSDT, SOLUSDT';
+    document.getElementById('str-mode').value = 'SWING';
+    document.getElementById('str-timeframe').value = '1h';
+    document.getElementById('str-entry').value = '[{"indicator":"RSI","period":14,"operator":"<","value":30}]';
+    document.getElementById('str-exit').value = '[{"indicator":"RSI","period":14,"operator":">","value":70}]';
+    document.getElementById('str-sl').value = '2.5';
+    document.getElementById('str-tp').value = '7.5';
+    document.getElementById('str-minrr').value = '2.0';
+    document.getElementById('str-minconf').value = '50';
+}
+
+function closeStrategyModal() {
+    document.getElementById('strategy-modal').classList.remove('show');
+}
+
+async function saveStrategy() {
+    const name = document.getElementById('str-name').value.trim();
+    const coins = document.getElementById('str-coins').value.trim();
+    const mode = document.getElementById('str-mode').value;
+    const timeframe = document.getElementById('str-timeframe').value;
+    const entryRaw = document.getElementById('str-entry').value.trim();
+    const exitRaw = document.getElementById('str-exit').value.trim();
+    const sl_pct = parseFloat(document.getElementById('str-sl').value) || 2.5;
+    const tp_pct = parseFloat(document.getElementById('str-tp').value) || 7.5;
+    const min_rr = parseFloat(document.getElementById('str-minrr').value) || 2.0;
+    const min_conf = parseInt(document.getElementById('str-minconf').value) || 50;
+    
+    if (!name || !coins) {
+        showToast('Name and coins are required', 'error');
+        return;
+    }
+    
+    // Parse conditions
+    let entry_conditions = [];
+    let exit_conditions = [];
+    try { entry_conditions = JSON.parse(entryRaw); } catch { showToast('Invalid entry conditions JSON', 'error'); return; }
+    try { exit_conditions = JSON.parse(exitRaw); } catch { showToast('Invalid exit conditions JSON', 'error'); return; }
+    
+    const coinsArr = coins.split(',').map(c => c.trim().toUpperCase()).filter(c => c);
+    
+    const resp = await apiPost('/api/strategies/', {
+        name, coins: coinsArr,
+        mode, timeframe,
+        entry_conditions, exit_conditions,
+        entry_logic: 'AND', exit_logic: 'OR',
+        sl_pct, tp_pct, min_rr, min_conf
+    });
+    
+    if (resp && resp.success) {
+        showToast('Strategy created', 'success');
+        closeStrategyModal();
+        refreshStrategies();
+    } else {
+        showToast(resp?.error || 'Failed to create strategy', 'error');
+    }
+}
+
+// ============================================
+// TEMPLATES MODAL (Phase 1.7)
+// ============================================
+function openTemplatesModal() {
+    document.getElementById('templates-modal').classList.add('show');
+    loadTemplates();
+}
+
+function closeTemplatesModal() {
+    document.getElementById('templates-modal').classList.remove('show');
+}
+
+async function loadTemplates() {
+    const resp = await apiFetch('/api/strategies/templates');
+    const container = document.getElementById('templates-content');
+    if (!resp || !container) return;
+    
+    const templates = resp.templates || [];
+    if (templates.length === 0) {
+        container.innerHTML = '<div class="empty-state">No templates available</div>';
+        return;
+    }
+    
+    let html = '';
+    templates.forEach(t => {
+        html += `<div class="template-item">
+            <div class="template-name">${t.name}</div>
+            <div class="template-desc">${t.description || ''}</div>
+            <div class="template-meta">${t.mode} | ${t.timeframe} | SL: ${t.sl_pct}% TP: ${t.tp_pct}%</div>
+            <button class="btn btn-start btn-xs" onclick="createFromTemplate('${t.id}', '${t.name} (Copy)')">USE TEMPLATE</button>
+        </div>`;
+    });
+    container.innerHTML = html;
+}
+
+async function createFromTemplate(templateId, name) {
+    const resp = await apiPost('/api/strategies/from-template', {
+        template_id: templateId,
+        name: name || 'My Strategy'
+    });
+    if (resp && resp.success) {
+        showToast('Strategy created from template', 'success');
+        closeTemplatesModal();
+        refreshStrategies();
+    } else {
+        showToast(resp?.error || 'Failed to create', 'error');
+    }
+}
+
+// ============================================
+// ENHANCED REFRESH ALL (Phase 1.7)
+// ============================================
+function refreshAll() {
+    refreshMarket();
+    refreshWatchlist();
+    refreshSignals();
+    refreshPerformance();
+    refreshBotStatus();
+    refreshPositions();
+    refreshRiskStatus();
+    refreshStrategies();
+}
