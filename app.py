@@ -13,8 +13,12 @@ from routes.auth import auth_bp
 from routes.learning import learning_bp
 from routes.binance import binance_bp
 from services.auth import require_auth, is_authenticated, SESSION_SECRET
+from services.database import init_db
 
 app = Flask(__name__)
+
+# Initialize database on startup
+init_db()
 app.secret_key = SESSION_SECRET
 app.config['JSON_SORT_KEYS'] = False
 app.config['PERMANENT_SESSION_LIFETIME'] = 86400  # 24 hours

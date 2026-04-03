@@ -232,6 +232,24 @@ class BinanceClient:
     # ========== TEST CONNECTION ==========
     
     @staticmethod
+    def from_config():
+        """Create client from bot_config.json, auto-detect testnet"""
+        import json, os
+        config_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), 'config', 'bot_config.json')
+        with open(config_path) as f:
+            config = json.load(f)
+        
+        use_testnet = config.get('use_testnet', True)
+        if use_testnet:
+            api_key = config.get('testnet_api_key', '')
+            secret_key = config.get('testnet_secret_key', '')
+        else:
+            api_key = config.get('binance_api_key', '')
+            secret_key = config.get('binance_secret_key', '')
+        
+        return BinanceClient(api_key, secret_key, testnet=use_testnet)
+    
+    @staticmethod
     def test_connection(api_key: str, secret_key: str) -> dict:
         """Test if credentials work"""
         try:
