@@ -2,44 +2,50 @@
 
 ## Identity
 
-**TradingCore** — cryptocurrency trading dashboard agent built on OpenClaw.
+**TradingCore** — standalone cryptocurrency trading dashboard with semi-auto execution.
 
+- Platform: Flask web application (standalone, no external dependencies)
 - Bahasa: Indonesian (Bahasa Indonesia)
 - Vibe: Professional, data-driven, honest about risk
 - Never hype trades. Never promise profit.
 
 ## Core Mission
 
-1. **Flexible** — user can configure every parameter without touching code
-2. **Scalable** — easily add new strategies, coins, or data sources
-3. **Controllable** — bot can be started and stopped on demand
-4. **Intelligent** — learns from past trades to improve future signals
+1. **Flexible** — user-defined strategies per coin, per market condition
+2. **Scalable** — easily add new strategies, indicators, or exchanges
+3. **Controllable** — bot can be started/stopped, trades require confirmation
+4. **Intelligent** — learns from past trades, evolves thresholds
+5. **Safe** — testnet-first, risk management, circuit breakers
 
 ---
 
-## Dashboard Layout
+## Dashboard Layout (Current)
 
-```
+```text
 ┌─────────────────────────────────────────────────────────────────┐
-│  TradingCore Dashboard        [● BOT ACTIVE]  [■ STOP BOT]     │
+│  [●] TradingCore Dashboard  [🧪 TESTNET]    [■ STOP] [▶ START] │
 ├──────────────┬──────────────────────────────┬───────────────────┤
-│ MARKET PULSE │       LIVE SIGNALS            │   BOT CONTROLS    │
-│              │                              │                   │
-│ F&G: 42      │  BTC/USDT  BUY              │  Mode: [SWING ▼]  │
-│ BTC Dom: 52% │  RSI: 28 | Conf: 72%         │                   │
-│ BTC Trend: ↑ │  Entry: $98,240              │  Interval: [15m▼] │
-│              │  SL: -2.5% | TP: +7.5%       │                   │
-│ Trending:    │  R:R: 1:3.0                  │  Coins: [20 ▼]   │
-│ SOL BNB ETH  │                              │                   │
-│              │  ETH/USDT  SELL              │  Min R:R: [2.0▼]  │
-│              │  RSI: 71 | Conf: 68%         │  Min Conf: [50▼]  │
-│              │  Entry: $3,420               │                   │
-│              │  SL: +2.5% | TP: -7.5%       │  [▶ START BOT]   │
+│ MARKET PULSE │       LIVE SIGNALS           │   BOT CONTROLS   │
+│              │                              │                  │
+│ F&G: 42      │  BTC/USDT  [BUY]  [▶ EXEC] │  Strategy: [▼]   │
+│ BTC Dom: 52% │  RSI: 28 | Conf: 72%        │  [+ New Strategy]│
+│ BTC Trend: ↑ │  Entry: $98,240             │                  │
+│              │  SL: -2.5% | TP: +7.5%      │  Interval: [▼]   │
+│ Trending:    │  R:R: 1:3.0                 │  Coins: [▼]      │
+│ SOL BNB ETH  │  Strategy: RSI Conservative │                  │
+│              │                              │  [▶ START BOT]   │
 ├──────────────┴──────────────────────────────┴───────────────────┤
-│  PERFORMANCE TRACKER                                              │
-│  Total: 2 | Win: 1 | Loss: 1 | Win Rate: 50%                    │
-│  Best: +6.41% (SOL) | Worst: -3.26% (BNB)                        │
-│  [LOG OUTCOME] [VIEW HISTORY] [RUN BACKTEST] [EVOLVE]             │
+│  OPEN POSITIONS                              [Risk: 🟢 OK]     │
+│  BTC/USDT  BUY @ $98,240  PnL: +1.2%  [CLOSE]                │
+├─────────────────────────────────────────────────────────────────┤
+│  STRATEGIES & BACKTEST                                         │
+│  [RSI Conservative ✅] [EMA Cross ⬜] [+ New] [Templates]      │
+│  Win Rate: 62%  |  PnL: +8.3%  |  [Backtest] [Edit]          │
+├─────────────────────────────────────────────────────────────────┤
+│  PERFORMANCE TRACKER                                           │
+│  Total: 12 | Win: 7 | Loss: 5 | Win Rate: 58%                │
+│  Best: +6.41% (SOL) | Worst: -3.26% (BNB)                    │
+│  [LOG OUTCOME] [VIEW HISTORY] [RUN BACKTEST] [EVOLVE]         │
 └─────────────────────────────────────────────────────────────────┘
 ```
 
@@ -60,168 +66,155 @@
 
 ---
 
-## Bot Controls Panel Parameters
-
-| Control | Options |
-|---------|---------|
-| Mode | Swing / Scalp / Both |
-| Scan Interval | 5m / 15m / 30m / 1h |
-| Coin Pool | Top 10 / 20 / 50 |
-| Min R:R | 1.5 / 2.0 / 2.5 / 3.0 |
-| Min Confidence | 30 / 50 / 70 |
-| RSI Buy Max | 30 / 35 / 40 |
-| RSI Sell Min | 60 / 65 / 70 |
-| EMA200 Filter | ON / OFF |
-| F&G Filter | ON / OFF |
-| Multi-TF Confirmation | ON / OFF |
-
----
-
 ## Signal Engine Pipeline
 
-```
-Step 1: MACRO CHECK
+```text
+Step 1: STRATEGY SELECTION
+- Load all active strategies from database
+- Each strategy has its own coins, indicators, conditions
+
+Step 2: MACRO CHECK
 - Fear & Greed Index (alternative.me)
 - BTC Dominance % (CoinGecko)
 - BTC Trend (EMA50 check)
 - Trending Coins (CoinGecko)
 
-Step 2: MACRO FILTER (if enabled)
+Step 3: MACRO FILTER (if enabled in strategy)
 - Skip BUY if F&G > max_buy_threshold
 - Reduce confidence if BTC below EMA50
 
-Step 3: COIN SCREENING
-- Get top N coins by volume
+Step 4: COIN SCREENING
+- For each strategy, scan its assigned coins
 
-Step 4: PER-COIN ANALYSIS
-For each coin:
-- RSI (Wilder's method)
-- EMA9, EMA21 (scalp)
-- EMA200 (swing trend filter)
+Step 5: PER-COIN ANALYSIS
+For each coin, calculate indicators as defined by strategy:
+- RSI (Wilder's method, configurable period)
+- EMA (configurable periods: 9, 21, 50, 200)
+- MACD (12/26/9 default)
+- Bollinger Bands (20/2 default)
 - ATR (dynamic stop loss)
 - VWAP
 - Volume ratio vs 20-period average
 
-Step 5: CONFIDENCE SCORE V2
-| Factor | Max Points |
-|--------|-----------|
-| RSI quality | 25 |
-| R:R bonus | 20 |
-| Volume | 15 |
-| Macro alignment | 20 |
-| Multi-TF confirmation | 10 |
-| Trending bonus | 10 |
+Step 6: CONDITION EVALUATION
+- Evaluate entry conditions per strategy (AND/OR logic)
+- Each condition: {indicator, period, operator, value}
+- Operators: <, >, <=, >=, ==, CROSS_ABOVE, CROSS_BELOW
 
-Step 6: SIGNAL OUTPUT
-- BUY/SELL/HOLD
-- Entry price
-- Stop loss (fixed % or ATR-based)
-- Take profit (TP1, TP2)
-- R:R ratio
-- Confidence score
+Step 7: CONFIDENCE SCORE V2
+| Factor              | Max Points |
+|---------------------|-----------|
+| RSI quality         | 25        |
+| R:R bonus           | 20        |
+| Volume              | 15        |
+| Macro alignment     | 20        |
+| Multi-TF confirm    | 10        |
+| Trending bonus      | 10        |
+
+Step 8: RISK CHECK
+- Verify: balance >= minimum, daily loss < max, positions < max
+- Calculate position size based on risk percentage
+- Check circuit breaker status
+
+Step 9: SIGNAL OUTPUT
+- BUY/SELL with strategy name
+- Entry price, SL price, TP price
+- R:R ratio, Confidence score
+- Suggested position size
+- [EXECUTE] button (semi-auto) or auto-queue (full-auto)
 ```
 
 ---
 
 ## Configuration Parameters
 
-### [1] Mode Trading
-- SWING: 2-7 hari, target 5-10%
-- SCALP: 5-30 menit, target 1%
-- HYBRID: keduanya aktif
-- CUSTOM: custom timeframe + targets
+### Trading Mode
 
-### [2] Signal Parameters
-- RSI Buy Max: 40 (default)
-- RSI Sell Min: 60 (default)
+| Mode | Duration | Target |
+|------|----------|--------|
+| SWING | 2-7 days | 5-10% |
+| SCALP | 5-30 min | 0.5-1.5% |
+| HYBRID | Both active | Mixed |
+
+### Signal Parameters (defaults, overridden by strategy)
+
+- RSI Buy Max: 40
+- RSI Sell Min: 60
 - RSI Extreme Buy: 30
 - RSI Extreme Sell: 70
 - EMA Fast: 9, EMA Slow: 21, EMA Trend: 200
 - Min Volume Ratio: 1.0x
-- Vol Spike Bonus: 1.5x
 
-### [3] Risk Management
-- Max Risk/Trade: 2% of account
-- Min R:R: 2.0 (swing), 1.5 (scalp)
-- Max Position: 20% of account
-- SL Mode: FIXED or DYNAMIC_ATR
-- Fixed SL: 2.5%
-- ATR Multiplier: 1.5x
-- Scalp SL: 0.3%, TP: 1.0%
-- Max Signals/Day: 10
+### Risk Management
 
-### [4] Filters
+- Risk per Trade: 2% of account balance
+- Max Daily Loss: 5% of account balance
+- Max Weekly Loss: 10% of account balance
+- Max Open Positions: 3
+- Max Position Size: 20% of account
+- Min Balance: $5 (stop trading below this)
+- Circuit Breaker: 3 consecutive losses → pause 60 min
+- SL Mode: FIXED (2.5%) or DYNAMIC_ATR (1.5x ATR)
+- Leverage: 1x default, 3x max (futures only)
+
+### Execution Mode
+
+| Mode | Behavior |
+|------|----------|
+| `semi_auto` | Signal appears → user clicks EXECUTE → order placed |
+| `full_auto` | Signal appears → auto-execute after risk check (future) |
+| `alert_only` | Signal appears → Telegram alert only, no execution |
+
+### Exchange
+
+- Primary: Binance (Spot + USDT-M Futures)
+- Testnet: `testnet.binance.vision` (Spot), `testnet.binancefuture.com` (Futures)
+- `use_testnet: true` → all orders go to testnet (default)
+
+### Filters (toggleable)
+
 - EMA200 Filter: ON/OFF
 - Multi-TF Confirm: ON/OFF
 - Fear & Greed Filter: ON/OFF
 - BTC Dominance Filter: ON/OFF
 - BTC Trend Filter: ON/OFF
-- Skip RSI 35-40: ON/OFF
+- Skip RSI 35-40 Zone: ON/OFF
 - Require Volume: ON/OFF
 - Apply Lessons: ON/OFF
 - Auto-Blacklist: ON/OFF
 
-### [5] Data Sources
-- Primary Exchange: Binance
-- Backup Exchange: Bybit
+### Data Sources
+
+- Exchange Data: Binance API (klines, ticker, orderbook)
 - Fear & Greed: alternative.me
-- Trending: CoinGecko
+- Trending Coins: CoinGecko
 - BTC Dominance: CoinGecko
-- Open Interest: Binance Futures
 
-### [6] Notifications
-- Alert Bot Token: [hidden]
-- Chat ID: [hidden]
+### Notifications
+
+- Telegram Bot Token + Chat ID (configured in dashboard Settings)
 - Signal Format: DETAILED / COMPACT
-- Include Chart: OFF (future)
+- Notify on: new signal, bot start/stop, TP hit, SL hit, daily summary
 
 ---
 
-## Commands Reference
+## RSI — Wilder's Method (MANDATORY)
 
-### Bot Control
-- `/bot start` — Start bot dengan config saat ini
-- `/bot stop` — Stop bot
-- `/bot status` — Show status, uptime, next scan
-- `/bot restart` — Restart bot
-- `/bot log` — View recent logs
-
-### Trading
-- `/analyze BTC` — Full swing analysis
-- `/scalp ETH` — Scalp analysis 1M
-- `/screen` — Manual scan
-- `/screen 50` — Scan top 50 coins
-- `/signal BTC` — Quick signal check
-- `/mode swing/scalp/hybrid` — Change mode
-
-### Configuration
-- `/config` — Interactive config menu
-- `/config rsi 35` — Set RSI buy max
-- `/config rr 2.5` — Set min R:R
-- `/config reset` — Reset to defaults
-- `/config show` — Show current config
-
-### Dashboard
-- `/dashboard` — Open Canvas web dashboard
-- `/panel` — Alias untuk dashboard
-
----
-
-## RSI Wilder's Method
+All RSI calculations MUST use Wilder's smoothing, not SMA. This matches TradingView and Binance.
 
 ```python
 def calculate_rsi_wilder(closes, period=14):
     deltas = [closes[i] - closes[i-1] for i in range(1, len(closes))]
     gains = [d if d > 0 else 0 for d in deltas]
     losses = [-d if d < 0 else 0 for d in deltas]
-    
+
     avg_gain = sum(gains[:period]) / period
     avg_loss = sum(losses[:period]) / period
-    
+
     for i in range(period, len(gains)):
         avg_gain = (avg_gain * (period - 1) + gains[i]) / period
         avg_loss = (avg_loss * (period - 1) + losses[i]) / period
-    
+
     rs = avg_gain / avg_loss if avg_loss > 0 else 0
     return 100 - (100 / (1 + rs))
 ```
@@ -230,101 +223,167 @@ def calculate_rsi_wilder(closes, period=14):
 
 ## File Structure
 
-```
+```text
 trading-dashboard/
-├── app.py                    # Flask application
+├── app.py                          # Flask entry point
+├── AGENT.md                        # Agent instructions (read first)
+├── requirements.txt                # Python dependencies
 ├── config/
-│   ├── bot_config.json       # All parameters
-│   └── bot_status.json       # Running state
+│   ├── bot_config.json             # All parameters + testnet keys
+│   ├── bot_status.json             # Bot running state
+│   └── watchlist.json              # Watched coins
 ├── routes/
-│   ├── signals.py            # /api/signals
-│   ├── bot_control.py        # /api/bot/start, /api/bot/stop
-│   ├── market.py             # /api/market/*
-│   └── performance.py        # /api/performance/*
+│   ├── signals.py                  # GET /api/signals
+│   ├── bot_control.py              # /api/bot/start, stop, status
+│   ├── market.py                   # /api/market/pulse, prices
+│   ├── performance.py              # /api/performance
+│   ├── binance.py                  # /api/binance/* (execution)
+│   ├── learning.py                 # /api/learning/*
+│   ├── strategies.py               # /api/strategies/* (Phase 1.2)
+│   ├── backtest.py                 # /api/backtest/* (Phase 1.3)
+│   └── positions.py                # /api/positions/* (Phase 1.4)
 ├── strategies/
-│   └── signal_engine.py      # Core pipeline
+│   ├── signal_engine.py            # Core indicators (RSI, EMA, ATR, VWAP)
+│   ├── screener.py                 # Coin screening & ranking
+│   ├── strategy_engine.py          # Flexible strategy evaluator (Phase 1.2)
+│   ├── strategy_templates.py       # 7 built-in templates (Phase 1.2)
+│   ├── backtester.py               # Historical backtest engine (Phase 1.3)
+│   ├── lessons.py                  # Pattern learning
+│   └── evolution.py                # Adaptive thresholds
+├── services/
+│   ├── auth.py                     # Login + @require_auth decorator
+│   ├── binance_client.py           # Binance Spot API client
+│   ├── binance_futures.py          # Binance Futures API client (Phase 1.6)
+│   ├── telegram_notifier.py        # Telegram notifications
+│   ├── database.py                 # SQLite database (Phase 1.1)
+│   ├── position_manager.py         # Position tracking (Phase 1.4)
+│   └── risk_manager.py             # Risk management (Phase 1.5)
 ├── templates/
-│   └── dashboard.html        # Main dashboard
+│   └── dashboard.html              # Main dashboard (single page)
 ├── static/
-│   └── dashboard.js          # Frontend logic
+│   ├── style.css                   # All styles
+│   └── app.js                      # Frontend logic
 ├── data/
-│   └── trades.json            # Trade history
-├── docs/
-│   └── SPEC.md               # This file
-└── requirements.txt
+│   ├── trading.db                  # SQLite database (Phase 1.1)
+│   ├── trades.json                 # Legacy trade history
+│   ├── signals.json                # Legacy signals
+│   ├── lessons.json                # Learned patterns
+│   └── thresholds.json             # Evolved thresholds
+└── docs/
+    ├── SPEC.md                     # This file
+    └── PHASE1_EXECUTION_GUIDE.md   # Step-by-step build guide
 ```
 
 ---
 
 ## API Endpoints
 
-### GET /api/market/pulse
-```json
-{
-  "fear_greed": 42,
-  "btc_dominance": 52.3,
-  "btc_trend": "bullish",
-  "trending": ["SOL", "BNB", "ETH"]
-}
+### Market Data
+
+```text
+GET /api/market/pulse
+→ { fear_greed, btc_dominance, btc_trend, trending[] }
+
+GET /api/market/prices
+→ { prices: [{ symbol, price, change_24h }] }
 ```
 
-### GET /api/signals
-```json
-{
-  "signals": [
-    {
-      "symbol": "BTC/USDT",
-      "side": "BUY",
-      "rsi": 28,
-      "confidence": 72,
-      "entry": 98240,
-      "sl": 2.5,
-      "tp": 7.5,
-      "rr": 3.0,
-      "mode": "SWING"
-    }
-  ]
-}
+### Signals
+
+```text
+GET /api/signals
+→ { signals: [{ symbol, side, rsi, confidence, entry, sl, tp, rr, mode, strategy_name }] }
 ```
 
-### POST /api/bot/start
-```json
-{"config": {...}}
+### Bot Control
+
+```text
+GET  /api/bot/status     → { running, uptime, next_scan, active_strategies }
+POST /api/bot/start      → { success: true }
+POST /api/bot/stop       → { success: true, session_stats }
 ```
 
-### POST /api/bot/stop
-```json
-{}
+### Configuration
+
+```text
+GET  /api/config         → { mode, interval, ... all bot_config fields }
+POST /api/config         → { success: true }
 ```
 
-### GET /api/performance
-```json
-{
-  "total_trades": 2,
-  "wins": 1,
-  "losses": 1,
-  "win_rate": 50,
-  "best_trade": {"symbol": "SOL", "pnl": 6.41},
-  "worst_trade": {"symbol": "BNB", "pnl": -3.26}
-}
+### Strategies (Phase 1.2)
+
+```text
+GET    /api/strategies              → List user strategies
+POST   /api/strategies              → Create new strategy
+GET    /api/strategies/<id>         → Get one strategy
+PUT    /api/strategies/<id>         → Update strategy
+DELETE /api/strategies/<id>         → Delete strategy
+POST   /api/strategies/<id>/clone   → Clone strategy
+POST   /api/strategies/<id>/activate    → Activate
+POST   /api/strategies/<id>/deactivate  → Deactivate
+GET    /api/strategies/templates    → List 7 built-in templates
+POST   /api/strategies/from-template → Create from template
 ```
 
-### GET /api/config
-```json
-{"mode": "SWING", "interval": "15m", ...}
+### Backtest (Phase 1.3)
+
+```text
+POST /api/backtest/run              → Run backtest on strategy
+POST /api/backtest/preview          → Quick backtest without saving
+GET  /api/backtest/history          → Past backtest results
+GET  /api/backtest/<id>             → One backtest detail
 ```
 
-### POST /api/config
-```json
-{"mode": "SCALP", "min_rr": 2.5, ...}
+### Positions (Phase 1.4)
+
+```text
+GET  /api/positions                 → Open positions
+GET  /api/positions/history         → Closed positions
+GET  /api/positions/summary         → Portfolio summary
+POST /api/positions/<id>/close      → Close position manually
+```
+
+### Execution (Phase 1.6)
+
+```text
+POST /api/binance/execute           → Execute signal (semi-auto)
+GET  /api/binance/account           → Account balance
+GET  /api/binance/orders            → Open orders
+```
+
+### Performance
+
+```text
+GET  /api/performance               → Win rate, PnL stats
+POST /api/performance/log           → Log trade outcome
+```
+
+### Telegram
+
+```text
+GET  /api/telegram/status           → { configured: true/false }
+POST /api/telegram/test             → Test + save credentials
+POST /api/telegram/send-test-signal → Send test notification
+```
+
+### Learning
+
+```text
+GET  /api/learning/stats            → Learning system statistics
+GET  /api/learning/patterns         → Learned patterns
+POST /api/learning/evolve           → Run threshold evolution
 ```
 
 ---
 
 ## Implementation Notes
 
-- RSI harus Wilder's method — sama dengan TradingView/Binance
-- EMA calculation pakai exponential smoothing standard
-- ATR pakai True Range standard
+- RSI MUST use Wilder's smoothing — same as TradingView/Binance
+- EMA uses exponential smoothing standard
+- ATR uses True Range standard
 - Volume ratio = current volume / 20-period average
-- All percentages dalam desimal (2.5% = 0.025)
+- Percentages stored as numbers: 2.5 means 2.5% (NOT 0.025)
+- All API responses: `{ success: true/false, error: "message" }` on failure
+- All endpoints use `@require_auth` decorator
+- Database: SQLite at `data/trading.db`
+- Default to testnet — live trading requires manual toggle in dashboard

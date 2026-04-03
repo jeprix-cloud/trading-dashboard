@@ -1,58 +1,96 @@
-# TradingCore Dashboard — Agent Instructions for Antigravity
+# TradingCore Dashboard — Agent Instructions
 
 ## Objective
 
-Build a complete **TradingCore Dashboard** — a Flask-based cryptocurrency trading platform with web UI, real-time signals, bot control, and Telegram notifications.
-
-**This is a MODULAR project** — build step by step, commit often.
+Build a complete **TradingCore Dashboard** — a Flask-based cryptocurrency trading platform with web UI, real-time signals, bot control, and semi-auto execution on Binance.
 
 ---
 
 ## Repository
 
-```
+```text
 https://github.com/jeprix-cloud/trading-dashboard
 git@github.com:jeprix-cloud/trading-dashboard.git
 ```
 
 ---
 
-## Current State
+## What Has Already Been Built (DO NOT REDO)
 
-✅ **Already Built (Foundation):**
-- Flask app with all API routes
-- Login/password protection
-- Telegram notification API (service ready, UI needed)
-- Basic config management
-- Dark-themed HTML template (basic)
+The following features are **COMPLETE and WORKING**. Do not rebuild them:
 
-✅ **Completed by Antigravity Agent:**
-- Full interactive dashboard UI (`templates/dashboard.html`, `static/style.css`, `static/app.js`)
-- Signal engine — Wilder RSI, EMA, ATR, VWAP, Confidence V2 (`strategies/signal_engine.py`)
-- Coin screener — pre-filter & rank coins before scan (`strategies/screener.py`)
-- Bot scheduler — APScheduler with start/stop/Telegram alerts (`routes/bot_control.py`)
-- Learning system — pattern recognition & auto-blacklist (`strategies/lessons.py`)
-- Evolution system — adaptive threshold tuning (`strategies/evolution.py`)
-- Learning API — 8 endpoints under `/api/learning` (`routes/learning.py`)
-- Settings modal — Telegram config & test from dashboard
-- Performance tracker — LOG OUTCOME, VIEW HISTORY, RUN BACKTEST, EVOLVE
-- Evolution modal — UI to view & apply evolved thresholds
-
-**All 4 Priorities: COMPLETE ✅**
-
+- ✅ Flask app with authentication (`app.py`, `services/auth.py`)
+- ✅ Full dashboard UI (`templates/dashboard.html`, `static/style.css`, `static/app.js`)
+- ✅ Signal engine — Wilder RSI, EMA, ATR, VWAP, Confidence V2 (`strategies/signal_engine.py`)
+- ✅ Coin screener (`strategies/screener.py`)
+- ✅ Bot scheduler — APScheduler (`routes/bot_control.py`)
+- ✅ Learning system — pattern recognition & blacklist (`strategies/lessons.py`)
+- ✅ Evolution system — adaptive thresholds (`strategies/evolution.py`)
+- ✅ Telegram notifications (`services/telegram_notifier.py`)
+- ✅ Binance API client — Spot only (`services/binance_client.py`)
+- ✅ Performance tracker with mock data (`routes/performance.py`)
+- ✅ Settings modal — Telegram config from dashboard
+- ✅ Market Pulse, Live Signals, Bot Controls panels
 
 ---
 
-## Task Priority
+## 🚨 CURRENT PRIORITY: Phase 1 Foundation
 
-### 🔴 PRIORITY 1: Dashboard UI (MOST IMPORTANT)
+> **YOU MUST READ:** `docs/PHASE1_EXECUTION_GUIDE.md` — it has detailed step-by-step instructions with code patterns, test commands, and commit messages.
 
-**Goal:** Full interactive web dashboard matching the spec exactly.
+**Goal:** Transform TradingCore from an alert-only system into a real semi-auto trading platform with flexible strategies, real backtesting, position tracking, risk management, and Binance execution.
 
-#### File: `templates/dashboard.html`
+### Progress Tracker
 
-**Design Spec:**
-```
+**Find the FIRST ⬜ item — that is YOUR task:**
+
+1. ⬜ **SQLite Database + Testnet Config** → `services/database.py`
+2. ⬜ **Flexible Strategy System** → `strategies/strategy_engine.py`, `strategies/strategy_templates.py`, `routes/strategies.py`
+3. ⬜ **Real Backtest Engine** → `strategies/backtester.py`, `routes/backtest.py`
+4. ⬜ **Position Manager** → `services/position_manager.py`, `routes/positions.py`
+5. ⬜ **Risk Management** → `services/risk_manager.py`
+6. ⬜ **Semi-Auto Execution** → `services/binance_futures.py`, update `routes/binance.py`
+7. ⬜ **Dashboard UI Updates** → update `dashboard.html`, `app.js`, `style.css`
+
+### Key Configuration
+
+- Binance Testnet API keys: already saved in `config/bot_config.json`
+- `use_testnet: true` → system defaults to testnet (no real money)
+- `execution_mode: semi_auto` → requires user click to confirm orders
+- Testnet Spot URL: `https://testnet.binance.vision`
+- Testnet Futures URL: `https://testnet.binancefuture.com`
+
+---
+
+## 🔁 AGENT RELAY PROTOCOL
+
+### When You Start a Session
+
+1. Read this file (`AGENT.md`)
+2. Find the FIRST ⬜ sub-phase above — that is YOUR task
+3. Open `docs/PHASE1_EXECUTION_GUIDE.md` and go to that sub-phase section
+4. Follow ALL tasks in that sub-phase step by step
+5. Run the test commands after each task
+6. Commit after completing ALL tasks in the sub-phase
+
+### When You Finish a Sub-Phase
+
+1. Run `python app.py` — verify server starts without errors
+2. Run the specific test commands from the execution guide
+3. `git add -A && git commit -m "feat: Phase 1.X - [description]"`
+4. **UPDATE THIS FILE:** Change the ⬜ to ✅ for your completed sub-phase
+5. Add an entry to the **Agent Work Log** section below
+6. Tell the user: "Sub-Phase 1.X complete. Next agent should work on Sub-Phase 1.Y"
+
+### If Something From a Previous Sub-Phase Is Broken
+
+Fix it before proceeding with your sub-phase.
+
+---
+
+## Design Rules (MUST FOLLOW)
+
+```text
 Background:      #0a0e1a (deep navy)
 Card background: #111827
 Accent Green:    #00ff9d
@@ -63,502 +101,52 @@ Text Secondary:  #64748b
 Border:          #1e293b
 ```
 
-#### Layout Structure:
-
-```
-┌─────────────────────────────────────────────────────────────────┐
-│  [●] TradingCore Dashboard        [■ STOP BOT] [▶ START BOT] │
-├──────────────┬──────────────────────────────┬─────────────────┤
-│ MARKET PULSE │      LIVE SIGNALS              │  BOT CONTROLS  │
-│              │                              │                 │
-│ F&G: 42      │  ┌─────────────────────────┐ │  Mode: [▼]     │
-│ (gauge)      │  │ BTC/USDT    [BUY]       │ │  Interval: [▼] │
-│              │  │ RSI: 28  Conf: 72%      │ │  Coins: [▼]   │
-│ BTC Dom: 52% │  │ Entry: $98,240          │ │  Min R:R: [▼] │
-│ BTC Trend: ↑  │  │ SL: -2.5% TP: +7.5%    │ │  Min Conf: [▼]│
-│              │  │ R:R: 1:3.0               │ │                 │
-│ Trending:    │  └─────────────────────────┘ │  [▶ START BOT] │
-│ SOL BNB ETH  │                              │                 │
-├──────────────┴──────────────────────────────┴─────────────────┤
-│  PERFORMANCE TRACKER                                           │
-│  Total: 2  |  Win: 1  |  Loss: 1  |  Win Rate: 50%         │
-│  Best: +6.41% (SOL)  |  Worst: -3.26% (BNB)                  │
-│  [LOG OUTCOME] [VIEW HISTORY] [RUN BACKTEST] [EVOLVE]         │
-└───────────────────────────────────────────────────────────────┘
-```
-
-#### UI Components Required:
-
-**1. Header Bar**
-- Pulsing green dot (active) / grey dot (stopped) with CSS animation
-- "TradingCore Dashboard" title
-- START/STOP buttons (toggle based on state)
-
-**2. Market Pulse Panel (left column)**
-- Fear & Greed value with color (red < 30, yellow 30-60, green > 60)
-- F&G label: "Extreme Fear" / "Fear" / "Greed" / "Extreme Greed"
-- BTC Dominance percentage
-- BTC Trend arrow (↑ bullish / ↓ bearish)
-- Trending coins list (top 3)
-
-**3. Live Signals Panel (center column)**
-- Scrollable list of signal cards
-- BUY cards: green left border (`border-left: 3px solid #00ff9d`)
-- SELL cards: red left border (`border-left: 3px solid #ff4757`)
-- Card contents:
-  - Symbol (BTC/USDT, ETH/USDT, etc.)
-  - Side badge: BUY (green) or SELL (red)
-  - RSI value
-  - Confidence percentage
-  - Entry price
-  - Stop Loss %
-  - Take Profit %
-  - R:R ratio
-
-**4. Bot Controls Panel (right column)**
-- Mode dropdown: SWING / SCALP / BOTH
-- Interval dropdown: 5m / 15m / 30m / 1h
-- Coins dropdown: Top 10 / 20 / 50
-- Min R:R dropdown: 1.5 / 2.0 / 2.5 / 3.0
-- Min Confidence dropdown: 30% / 50% / 70%
-- START BOT button (full width, green)
-- SETTINGS button (for Telegram config)
-
-**5. Performance Tracker (bottom bar)**
-- Stats: Total | Win | Loss | Win Rate | Best | Worst
-- Action buttons: LOG OUTCOME | VIEW HISTORY | RUN BACKTEST | EVOLVE
-
-**6. Settings Modal (for Telegram)**
-- Bot Token input (password field)
-- Chat ID input
-- Test Connection button
-- Send Test Signal button
-- Connection status indicator
-
-#### API Integration:
-
-```javascript
-// Fetch data
-GET /api/market/pulse      → Market data (F&G, BTC Dom, trending)
-GET /api/signals            → Trading signals array
-GET /api/bot/status         → Bot running state
-GET /api/performance        → Win rate, trade stats
-GET /api/config             → Current config
-
-// Actions
-POST /api/bot/start         → { success: true }
-POST /api/bot/stop          → { success: true, session_stats: {...} }
-POST /api/config            → Update config
-
-// Telegram
-GET /api/telegram/status    → { configured: true/false }
-POST /api/telegram/test     → Test + save credentials
-POST /api/telegram/send-test-signal → Send test notification
-```
-
-#### JavaScript Requirements:
-
-```javascript
-// Auto-refresh every 30 seconds
-setInterval(refreshAll, 30000);
-
-// Bot status polling
-async function checkBotStatus() {
-    const res = await fetch('/api/bot/status');
-    const data = await res.json();
-    updateBotStatus(data); // Update dot color, buttons
-}
-
-// Signal polling
-async function refreshSignals() {
-    const res = await fetch('/api/signals');
-    const data = await res.json();
-    renderSignalCards(data.signals);
-}
-
-// Market polling
-async function refreshMarket() {
-    const res = await fetch('/api/market/pulse');
-    const data = await res.json();
-    updateMarketPulse(data);
-}
-
-// Performance polling
-async function refreshPerformance() {
-    const res = await fetch('/api/performance');
-    const data = await res.json();
-    updateStats(data);
-}
-
-// Start/Stop handlers
-document.getElementById('start-btn').addEventListener('click', () => {
-    fetch('/api/bot/start', { method: 'POST' });
-    // Update UI immediately
-    setBotStatus('running');
-});
-```
+- Dark theme ONLY — no light theme
+- RSI must be Wilder's method — simple moving average is WRONG
+- Use `@require_auth` decorator on ALL API endpoints
+- Error responses: `{"success": false, "error": "message"}`
+- Follow existing Flask Blueprint patterns (see `routes/market.py` as example)
+- Mobile responsive
+- No heavy dependencies — prefer Python stdlib (`sqlite3`, `json`, `uuid`)
 
 ---
 
-### 🔴 PRIORITY 2: Signal Engine
+## Key Files to Read Before Coding
 
-**File:** `strategies/signal_engine.py`
-
-#### Wilder's RSI (REQUIRED — same as TradingView/Binance):
-
-```python
-def calculate_rsi_wilder(closes, period=14):
-    """
-    Wilder's Smoothed RSI
-    NOT simple moving average — this is critical
-    """
-    deltas = []
-    for i in range(1, len(closes)):
-        deltas.append(closes[i] - closes[i-1])
-    
-    gains = [d if d > 0 else 0 for d in deltas]
-    losses = [-d if d < 0 else 0 for d in deltas]
-    
-    # Initial average
-    avg_gain = sum(gains[:period]) / period
-    avg_loss = sum(losses[:period]) / period
-    
-    # Wilder smoothing
-    for i in range(period, len(gains)):
-        avg_gain = (avg_gain * (period - 1) + gains[i]) / period
-        avg_loss = (avg_loss * (period - 1) + losses[i]) / period
-    
-    rs = avg_gain / avg_loss if avg_loss > 0 else 0
-    return 100 - (100 / (1 + rs))
-```
-
-#### EMA Calculation:
-
-```python
-def calculate_ema(prices, period):
-    """Exponential Moving Average"""
-    ema = sum(prices[:period]) / period
-    multiplier = 2 / (period + 1)
-    for price in prices[period:]:
-        ema = (price - ema) * multiplier + ema
-    return ema
-```
-
-#### ATR (Average True Range):
-
-```python
-def calculate_atr(highs, lows, closes, period=14):
-    """True Range = max(H-L, |H-PC|, |L-PC|)"""
-    trs = []
-    for i in range(1, len(closes)):
-        tr = max(
-            highs[i] - lows[i],
-            abs(highs[i] - closes[i-1]),
-            abs(lows[i] - closes[i-1])
-        )
-        trs.append(tr)
-    
-    # Wilder smoothing for ATR
-    atr = sum(trs[:period]) / period
-    for i in range(period, len(trs)):
-        atr = (atr * (period - 1) + trs[i]) / period
-    return atr
-```
-
-#### VWAP:
-
-```python
-def calculate_vwap(closes, volumes):
-    """Volume Weighted Average Price"""
-    cum_vol = sum(volumes)
-    if cum_vol == 0:
-        return sum(closes) / len(closes)
-    cum_pv = sum(c * v for c, v in zip(closes, volumes))
-    return cum_pv / cum_vol
-```
-
-#### Confidence Score V2 (100-point system):
-
-```python
-def calculate_confidence(rsi, rr_ratio, volume_ratio, macro_score, multitf_aligned, trending):
-    """
-    Confidence Score V2
-    Max 100 points
-    """
-    score = 0
-    
-    # RSI quality (25 pts max)
-    if rsi < 25 or rsi > 75:
-        score += 25
-    elif rsi < 30 or rsi > 70:
-        score += 20
-    elif rsi < 35 or rsi > 65:
-        score += 12
-    elif 35 <= rsi <= 40 or 60 <= rsi <= 65:
-        score += 5  # WARNING ZONE
-    else:
-        score += 0
-    
-    # R:R bonus (20 pts max)
-    if rr_ratio >= 3.0:
-        score += 20
-    elif rr_ratio >= 2.5:
-        score += 15
-    elif rr_ratio >= 2.0:
-        score += 10
-    
-    # Volume (15 pts max)
-    if volume_ratio >= 2.0:
-        score += 15
-    elif volume_ratio >= 1.5:
-        score += 10
-    elif volume_ratio >= 1.0:
-        score += 5
-    
-    # Macro alignment (20 pts max)
-    if macro_score >= 80:
-        score += 20
-    elif macro_score >= 60:
-        score += 15
-    elif macro_score >= 40:
-        score += 10
-    else:
-        score += 5
-    
-    # Multi-TF confirmation (10 pts)
-    if multitf_aligned:
-        score += 10
-    
-    # Trending bonus (10 pts)
-    if trending:
-        score += 10
-    
-    return min(score, 100)
-```
-
-#### Main Signal Generation:
-
-```python
-def analyze_coin(symbol, config, market_data):
-    """
-    Main analysis for one coin
-    Returns signal dict or None
-    """
-    # Fetch OHLCV data from Binance
-    # Calculate RSI, EMA, ATR, VWAP
-    # Check filters (EMA200, F&G, etc.)
-    # Calculate confidence score
-    # Return signal if meets criteria
-    pass
-
-def run_scan(config, market_data):
-    """
-    Scan all configured coins
-    Filter by min_rr, min_confidence
-    Return signals sorted by confidence
-    """
-    coins = get_top_coins(config['coin_pool'])
-    signals = []
-    
-    for coin in coins:
-        signal = analyze_coin(coin, config, market_data)
-        if signal:
-            signals.append(signal)
-    
-    # Filter
-    signals = [s for s in signals if s['rr'] >= config['min_rr']]
-    signals = [s for s in signals if s['confidence'] >= config['min_confidence']]
-    
-    # Sort by confidence
-    signals.sort(key=lambda x: x['confidence'], reverse=True)
-    
-    return signals
-```
+| File | Purpose |
+|------|---------|
+| `app.py` | Flask app, blueprint registration pattern |
+| `routes/market.py` | Example route pattern (Blueprint, `@require_auth`, JSON) |
+| `strategies/signal_engine.py` | Indicator calculations (RSI, EMA, ATR, VWAP) |
+| `services/binance_client.py` | Binance API client pattern |
+| `services/auth.py` | Authentication decorator |
+| `config/bot_config.json` | All configuration (testnet keys, risk settings) |
+| `docs/PHASE1_EXECUTION_GUIDE.md` | **Step-by-step instructions for Phase 1** |
+| `docs/SPEC.md` | Original UI/design specifications |
 
 ---
 
-### 🔴 PRIORITY 3: Bot Scheduler
+## Agent Work Log
 
-**File:** `routes/bot_control.py` (enhance existing)
+*Each agent adds an entry here after completing their sub-phase:*
 
-```python
-from apscheduler.schedulers.background import BackgroundScheduler
-from apscheduler.triggers.interval import IntervalTrigger
-
-scheduler = BackgroundScheduler()
-scheduler.start()
-
-def start_bot_handler():
-    """Start scheduled scans"""
-    config = read_config()
-    interval_map = {
-        '5m': 5,
-        '15m': 15,
-        '30m': 30,
-        '1h': 60
-    }
-    minutes = interval_map.get(config['interval'], 15)
-    
-    # Schedule recurring scan
-    def scan_job():
-        signals = run_scan(config, get_market_data())
-        save_signals(signals)
-        # Send Telegram alerts for new signals
-    
-    scheduler.add_job(
-        scan_job,
-        trigger=IntervalTrigger(minutes=minutes),
-        id='trading_scan',
-        name='Trading Scan',
-        replace_existing=True
-    )
-    
-    # Run immediately
-    scan_job()
-
-def stop_bot_handler():
-    """Stop scheduled scans"""
-    scheduler.remove_job('trading_scan')
-```
+| Date | Agent | Sub-Phase | Status | Notes |
+|------|-------|-----------|--------|-------|
+| 2026-04-03 | Antigravity | Planning | ✅ | Created Phase 1 plan, execution guide, testnet config saved |
+| | | | | |
 
 ---
 
-### 🟡 PRIORITY 4: Learning System (Can do later)
+## Reference Documents
 
-**Files:** `strategies/lessons.py`, `strategies/evolution.py`
+**Active:**
+- `docs/PHASE1_EXECUTION_GUIDE.md` — **Step-by-step instructions for Phase 1 (READ THIS)**
+- `docs/SPEC.md` — Original UI/design specifications
 
-```python
-# lessons.json structure
-{
-    "patterns": [
-        {
-            "pattern": "F&G<30_AND_RSI<30",
-            "occurrences": 5,
-            "wins": 4,
-            "avg_pnl": 5.2,
-            "win_rate": 80
-        }
-    ],
-    "blacklist": ["RSI_35_40_ZONE"]
-}
-
-def load_lessons():
-    """Load from data/lessons.json"""
-
-def apply_lessons(signals, lessons):
-    """Adjust confidence based on learned patterns"""
-
-def evolve_thresholds(history):
-    """Adjust RSI/FG thresholds based on historical performance"""
-```
-
----
-
-## File Structure to Create/Modify
-
-```
-trading-dashboard/
-├── templates/
-│   └── dashboard.html          ← ENHANCE (Priority 1)
-├── static/
-│   ├── style.css               ← CREATE (Priority 1)
-│   └── app.js                  ← CREATE (Priority 1)
-├── strategies/
-│   ├── signal_engine.py        ← CREATE (Priority 2)
-│   ├── screener.py            ← CREATE (Priority 2)
-│   ├── lessons.py              ← CREATE (Priority 4)
-│   └── evolution.py            ← CREATE (Priority 4)
-├── data/
-│   ├── lessons.json           ← CREATE (auto)
-│   └── thresholds.json         ← CREATE (auto)
-└── routes/
-    └── bot_control.py          ← ENHANCE (Priority 3)
-```
-
----
-
-## Execution Steps
-
-### Step 1: Read
-```
-1. Read this AGENT.md completely
-2. Read docs/SPEC.md for full specifications
-3. Read existing templates/dashboard.html
-4. Read existing routes/*.py to understand structure
-```
-
-### Step 2: Priority 1 — Dashboard UI
-```
-1. Enhance templates/dashboard.html to match layout exactly
-2. Create static/style.css with all styles
-3. Create static/app.js with API calls and polling
-4. Add Settings modal for Telegram
-5. Test: python app.py → open http://localhost:5000
-6. Verify all panels display correctly
-7. Commit: "feat: Complete dashboard UI"
-```
-
-### Step 3: Priority 2 — Signal Engine
-```
-1. Create strategies/signal_engine.py
-2. Implement RSI Wilder, EMA, ATR, VWAP
-3. Implement confidence scoring
-4. Implement analyze_coin() and run_scan()
-5. Test with mock data
-6. Commit: "feat: Signal engine with Wilder RSI"
-```
-
-### Step 4: Priority 3 — Bot Scheduler
-```
-1. Install apscheduler: pip install apscheduler
-2. Enhance routes/bot_control.py
-3. Add APScheduler for recurring scans
-4. Connect to Telegram for alerts
-5. Test start/stop
-6. Commit: "feat: Bot scheduler with APScheduler"
-```
-
-### Step 5: Priority 4 — Learning (optional)
-```
-1. Create strategies/lessons.py
-2. Create strategies/evolution.py
-3. Implement pattern recognition
-4. Implement threshold evolution
-5. Commit: "feat: Learning system"
-```
-
----
-
-## Testing Checklist
-
-- [ ] Dashboard loads at http://localhost:5000
-- [ ] Login page appears, password works
-- [ ] Market Pulse shows F&G, BTC Dom, Trending
-- [ ] Signals display as cards with correct colors
-- [ ] Bot START/STOP buttons work
-- [ ] Bot status indicator updates (green/grey dot)
-- [ ] Config changes persist
-- [ ] Telegram test connection works
-- [ ] No console errors
-- [ ] Responsive on mobile width
-
----
-
-## Important Notes
-
-1. **RSI must be Wilder's method** — simple moving average is WRONG
-2. **Commit often** — every completed task, push to GitHub
-3. **Test locally first** — before pushing, run `python app.py` and verify
-4. **Error handling** — all API calls should handle errors gracefully
-5. **Dark theme only** — no light theme, spec explicitly says dark
-
----
-
-## Questions?
-
-If anything is unclear in the spec, check `docs/SPEC.md` first. That is the source of truth.
-
-For implementation details, check existing code in `routes/` to match patterns.
+**Archived (completed/superseded — do NOT follow these):**
+- `docs/archive/STANDALONE_MODE_PLAN.md` — Already implemented
+- `docs/archive/STRATEGY_BUILDER_PLAN.md` — Superseded by Phase 1.2
+- `docs/archive/MARKET_DATA_PLAN.md` — Phase 1-2 done, rest is future
 
 ---
 
