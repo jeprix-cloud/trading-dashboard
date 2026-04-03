@@ -107,6 +107,22 @@ async function refreshMarket() {
             `<span class="trending-coin">${coin}</span>`
         ).join('');
     }
+
+    // Fetch global market data for Market Cap and 24h change
+    const globalData = await apiFetch('/api/market/global');
+    if (globalData) {
+        const mcapEl = document.getElementById('total-mcap');
+        const changeEl = document.getElementById('mcap-change');
+        if (mcapEl) mcapEl.textContent = formatMarketCap(globalData.total_market_cap);
+        if (changeEl) {
+            const change = globalData.market_cap_change_24h;
+            if (change !== undefined && change !== null) {
+                const sign = change >= 0 ? '+' : '';
+                changeEl.textContent = sign + change.toFixed(2) + '%';
+                changeEl.className = `stat-value ${change >= 0 ? 'bullish' : 'bearish'}`;
+            }
+        }
+    }
 }
 
 // ============================================
@@ -116,6 +132,14 @@ function formatPrice(price) {
     if (price >= 1000) return '$' + price.toLocaleString('en-US', { maximumFractionDigits: 0 });
     if (price >= 1) return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
     return '$' + price.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 });
+}
+
+function formatMarketCap(value) {
+    if (!value || value === 0) return '--';
+    if (value >= 1e12) return '$' + (value / 1e12).toFixed(2) + 'T';
+    if (value >= 1e9) return '$' + (value / 1e9).toFixed(2) + 'B';
+    if (value >= 1e6) return '$' + (value / 1e6).toFixed(2) + 'M';
+    return '$' + value.toLocaleString('en-US', { maximumFractionDigits: 0 });
 }
 
 function renderSignalCards(signals, isExample = false, message = '') {
