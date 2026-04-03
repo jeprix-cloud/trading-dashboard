@@ -28,10 +28,17 @@ def save_config(data):
 @binance_bp.route('/status', methods=['GET'])
 @require_auth
 def get_binance_status():
-    """Check if Binance is configured"""
+    """Check if Binance is configured (supports testnet)"""
     config = load_config()
-    api_key = config.get('binance_api_key', '')
-    secret_key = config.get('binance_secret_key', '')
+    use_testnet = config.get('use_testnet', False)
+    
+    # Pick the right keys based on testnet toggle
+    if use_testnet:
+        api_key = config.get('testnet_api_key', '')
+        secret_key = config.get('testnet_secret_key', '')
+    else:
+        api_key = config.get('binance_api_key', '')
+        secret_key = config.get('binance_secret_key', '')
     
     has_key = bool(api_key and secret_key)
     
@@ -39,16 +46,17 @@ def get_binance_status():
         'configured': has_key,
         'has_api_key': bool(api_key),
         'has_secret_key': bool(secret_key),
-        'execution_mode': config.get('execution_mode', 'signal_only')
+        'execution_mode': config.get('execution_mode', 'signal_only'),
+        'testnet': use_testnet
     }
     
     # Try to connect if keys exist
     if has_key:
         try:
-            client = BinanceClient(api_key, secret_key)
+            client = BinanceClient(api_key, secret_key, testnet=use_testnet)
             account = client.get_account()
             result['connected'] = True
-            result['balances'] = account.get('balances', [])[:5]  # First 5 only
+            result['balances'] = account.get('balances', [])[:5]
         except Exception as e:
             result['connected'] = False
             result['error'] = str(e)

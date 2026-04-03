@@ -15,10 +15,13 @@ BINANCE_API_VERSION = "v3"
 class BinanceClient:
     """Simple Binance API client for authenticated requests"""
     
-    def __init__(self, api_key: str, secret_key: str):
+    def __init__(self, api_key: str, secret_key: str, testnet: bool = False):
         self.api_key = api_key
         self.secret_key = secret_key
-        self.base_url = BINANCE_BASE
+        if testnet:
+            self.base_url = "https://testnet.binance.vision"
+        else:
+            self.base_url = BINANCE_BASE
     
     def _sign(self, params: dict) -> str:
         """Generate signature for authenticated requests"""

@@ -10,7 +10,22 @@ from flask import request, jsonify, session, redirect, url_for
 # Get password from environment or use default (change in production!)
 DEFAULT_PASSWORD = os.environ.get('DASHBOARD_PASSWORD', 'tradingcore2026')
 PASSWORD_HASH = hashlib.sha256(DEFAULT_PASSWORD.encode()).hexdigest()
-SESSION_SECRET = os.environ.get('SESSION_SECRET', secrets.token_hex(32))
+
+# Persistent session secret — survives Flask restarts
+def _get_session_secret():
+    env_secret = os.environ.get('SESSION_SECRET')
+    if env_secret:
+        return env_secret
+    secret_file = os.path.join(os.path.dirname(os.path.dirname(__file__)), '.session_secret')
+    if os.path.exists(secret_file):
+        with open(secret_file, 'r') as f:
+            return f.read().strip()
+    new_secret = secrets.token_hex(32)
+    with open(secret_file, 'w') as f:
+        f.write(new_secret)
+    return new_secret
+
+SESSION_SECRET = _get_session_secret()
 
 
 def verify_password(password):

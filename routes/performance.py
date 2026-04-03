@@ -13,41 +13,13 @@ performance_bp = Blueprint('performance', __name__)
 
 TRADES_PATH = os.path.join(os.path.dirname(__file__), '..', 'data', 'trades.json')
 
-# Mock trade data for demo
-MOCK_TRADES = [
-    {
-        'id': 'trade_001',
-        'symbol': 'SOL/USDT',
-        'side': 'BUY',
-        'entry': 168.50,
-        'exit': 179.35,
-        'pnl_pct': 6.41,
-        'outcome': 'TP',
-        'mode': 'SWING',
-        'opened_at': (datetime.now() - timedelta(days=3)).isoformat(),
-        'closed_at': datetime.now().isoformat()
-    },
-    {
-        'id': 'trade_002',
-        'symbol': 'BNB/USDT',
-        'side': 'BUY',
-        'entry': 598.20,
-        'exit': 578.80,
-        'pnl_pct': -3.26,
-        'outcome': 'SL',
-        'mode': 'SWING',
-        'opened_at': (datetime.now() - timedelta(days=2)).isoformat(),
-        'closed_at': datetime.now().isoformat()
-    }
-]
-
 
 def get_trades():
-    """Get all trades"""
+    """Get all trades from file (no mock data)"""
     if os.path.exists(TRADES_PATH):
         with open(TRADES_PATH, 'r') as f:
             return json.load(f)
-    return MOCK_TRADES
+    return []
 
 
 @performance_bp.route('', methods=['GET'])
