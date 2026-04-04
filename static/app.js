@@ -1248,38 +1248,52 @@ async function resetCircuitBreaker() {
 // STRATEGIES PANEL (Phase 1.7)
 // ============================================
 async function refreshStrategies() {
-    const resp = await apiFetch('/api/strategies/');
-    if (!resp) return;
     const container = document.getElementById('strategies-container');
     if (!container) return;
     
-    const strategies = resp.strategies || [];
-    if (strategies.length === 0) {
-        container.innerHTML = '<div class="empty-state">No strategies yet. Create one!</div>';
-        return;
+    try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 8000);
+        const resp = await apiFetch('/api/strategies/', { signal: controller.signal });
+        clearTimeout(timeout);
+        
+        if (!resp || !resp.strategies) {
+            container.innerHTML = '<div class="empty-state">Failed to load. Tap + NEW.</div>';
+            return;
+        }
+        
+        const strategies = resp.strategies;
+        if (strategies.length === 0) {
+            container.innerHTML = '<div class="empty-state">No strategies yet. Create one!</div>';
+            return;
+        }
+        
+        let html = '';
+        strategies.forEach(s => {
+            const activeBadge = s.is_active ? '<span class="badge active">ACTIVE</span>' : '';
+            const mode = s.mode || 'SWING';
+            html += '<div class="strategy-item">';
+            html += '<div class="strategy-header">';
+            html += `<span class="strategy-name">${s.name || ''}</span>`;
+            html += activeBadge;
+            html += '</div>';
+            html += `<div class="strategy-meta">${mode} | ${s.timeframe || '15m'} | ${s.min_rr || 2}x R:R</div>`;
+            html += `<div class="strategy-coins">${(s.coins || '').substring(0, 40)}</div>`;
+            html += '<div class="strategy-actions">';
+            if (s.is_active) {
+                html += `<button class="btn-xs" onclick="toggleStrategy('${s.id}', 0)">DEACTIVATE</button>`;
+            } else {
+                html += `<button class="btn-xs btn-start" onclick="toggleStrategy('${s.id}', 1)">ACTIVATE</button>`;
+            }
+            html += `<button class="btn-xs" onclick="deleteStrategy('${s.id}')">DELETE</button>`;
+            html += '</div></div>';
+        });
+        container.innerHTML = html;
+        
+    } catch (e) {
+        console.error('refreshStrategies error:', e);
+        container.innerHTML = '<div class="empty-state">Error loading. Tap refresh.</div>';
     }
-    
-    let html = '';
-    strategies.forEach(s => {
-        const activeBadge = s.is_active ? '<span class="badge active">ACTIVE</span>' : '';
-        const mode = s.mode || 'SWING';
-        html += `<div class="strategy-item">
-            <div class="strategy-header">
-                <span class="strategy-name">${s.name}</span>
-                ${activeBadge}
-            </div>
-            <div class="strategy-meta">${mode} | ${s.timeframe || '15m'} | ${s.min_rr || 2}x R:R</div>
-            <div class="strategy-coins">${(s.coins || '').substring(0, 40)}</div>
-            <div class="strategy-actions">
-                ${s.is_active
-                    ? `<button class="btn-xs" onclick="toggleStrategy('${s.id}', 0)">DEACTIVATE</button>`
-                    : `<button class="btn-xs btn-start" onclick="toggleStrategy('${s.id}', 1)">ACTIVATE</button>`
-                }
-                <button class="btn-xs" onclick="deleteStrategy('${s.id}')">DELETE</button>
-            </div>
-        </div>`;
-    });
-    container.innerHTML = html;
 }
 
 async function toggleStrategy(strategyId, activate) {
