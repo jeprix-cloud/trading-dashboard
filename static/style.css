@@ -1563,8 +1563,278 @@ textarea:focus { outline: none; border-color: var(--accent-blue); }
 
 
 /* ===== Phase 1.7: Grid placements for new panels ===== */
-.positions-panel { display: none; }
-.positions-panel.visible { display: block; }
 .positions-panel { grid-column: 3; grid-row: 1; }
-.risk-panel { grid-column: 3; grid-row: 2; }
-.strategies-panel { grid-column: 3; grid-row: 3; }
+.risk-panel      { grid-column: 3; grid-row: 2; }
+.strategies-panel{ grid-column: 3; grid-row: 3; }
+
+/* ============================================
+   PHASE 1.7 NEW COMPONENTS
+   ============================================ */
+
+/* --- TESTNET + RISK BADGES (header) --- */
+.testnet-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--accent-yellow-dim);
+  color: var(--accent-yellow);
+  border: 1px solid rgba(255,215,0,0.25);
+  border-radius: 20px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  animation: testnetPulse 3s ease-in-out infinite;
+}
+
+@keyframes testnetPulse {
+  0%, 100% { opacity: 1; }
+  50%       { opacity: 0.75; }
+}
+
+.risk-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.3rem;
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+  border: 1px solid rgba(0,255,157,0.2);
+  border-radius: 20px;
+  padding: 0.25rem 0.65rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.risk-badge.danger {
+  background: var(--accent-red-dim);
+  color: var(--accent-red);
+  border-color: rgba(255,71,87,0.25);
+}
+
+/* --- SIGNAL ACTIONS (EXECUTE / SKIP) --- */
+.signal-actions {
+  display: flex;
+  gap: 0.4rem;
+  margin-top: 0.65rem;
+  padding-top: 0.6rem;
+  border-top: 1px solid var(--border);
+}
+
+.execute-btn {
+  flex: 1;
+  padding: 0.4rem 0.75rem;
+  background: var(--accent-green);
+  color: var(--bg-primary);
+  border: none;
+  border-radius: var(--radius-sm);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  animation: executePulse 2s ease-in-out infinite;
+}
+
+@keyframes executePulse {
+  0%, 100% { box-shadow: 0 0 6px rgba(0,255,157,0.3); }
+  50%       { box-shadow: 0 0 14px rgba(0,255,157,0.55); }
+}
+
+.execute-btn:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 4px 16px rgba(0,255,157,0.4);
+}
+
+.skip-btn {
+  padding: 0.4rem 0.6rem;
+  background: transparent;
+  color: var(--text-muted);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  font-family: 'Inter', sans-serif;
+  font-size: 0.72rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+}
+
+.skip-btn:hover {
+  background: var(--accent-red-dim);
+  color: var(--accent-red);
+  border-color: var(--accent-red);
+}
+
+/* --- SIGNAL STRATEGY TAG --- */
+.signal-strategy-tag {
+  font-size: 0.65rem;
+  color: var(--accent-blue);
+  background: var(--accent-blue-dim);
+  padding: 0.15rem 0.45rem;
+  border-radius: 4px;
+  margin-bottom: 0.5rem;
+  display: inline-block;
+  font-weight: 600;
+}
+
+/* --- CONDITION BUILDER (Strategy Modal) --- */
+.condition-section {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  margin-bottom: 0.85rem;
+}
+
+.condition-builder {
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+  min-height: 36px;
+}
+
+.condition-row {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  padding: 0.35rem 0.5rem;
+  animation: panelFadeIn 0.2s ease both;
+}
+
+.condition-row select,
+.condition-row input {
+  padding: 0.25rem 0.35rem;
+  font-size: 0.72rem;
+  border-radius: 4px;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  color: var(--text-primary);
+}
+
+.condition-row select:focus,
+.condition-row input:focus {
+  border-color: var(--accent-green);
+  outline: none;
+}
+
+.btn-danger-xs {
+  padding: 0.2rem 0.45rem;
+  background: var(--accent-red-dim);
+  color: var(--accent-red);
+  border: 1px solid rgba(255,71,87,0.2);
+  border-radius: 4px;
+  font-size: 0.7rem;
+  cursor: pointer;
+  transition: all var(--transition-fast);
+  flex-shrink: 0;
+}
+
+.btn-danger-xs:hover {
+  background: var(--accent-red);
+  color: white;
+}
+
+/* --- POSITION ITEMS --- */
+.position-item {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  transition: border-color var(--transition-fast);
+}
+
+.position-item:hover { border-color: var(--border-hover); }
+
+.position-symbol {
+  font-weight: 700;
+  font-size: 0.85rem;
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 0.3rem;
+}
+
+.position-entry,
+.position-sl-tp {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 0.2rem;
+}
+
+.position-pnl {
+  font-size: 0.8rem;
+  font-weight: 700;
+  font-family: 'JetBrains Mono', monospace;
+  margin: 0.3rem 0;
+}
+
+.position-pnl.profit { color: var(--accent-green); }
+.position-pnl.loss   { color: var(--accent-red); }
+
+/* --- STRATEGY ITEMS --- */
+.strategy-item {
+  background: var(--bg-primary);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-md);
+  padding: 0.75rem;
+  margin-bottom: 0.5rem;
+  transition: all var(--transition-fast);
+}
+
+.strategy-item:hover { border-color: var(--border-hover); }
+
+.strategy-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 0.3rem;
+}
+
+.strategy-name {
+  font-weight: 600;
+  font-size: 0.85rem;
+}
+
+.strategy-meta {
+  font-size: 0.68rem;
+  color: var(--text-secondary);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 0.25rem;
+}
+
+.strategy-coins {
+  font-size: 0.65rem;
+  color: var(--text-muted);
+  margin-bottom: 0.5rem;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.strategy-actions {
+  display: flex;
+  gap: 0.35rem;
+  flex-wrap: wrap;
+}
+
+/* Active badge */
+.badge {
+  font-size: 0.6rem;
+  font-weight: 700;
+  padding: 0.15rem 0.4rem;
+  border-radius: 4px;
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+  border: 1px solid rgba(0,255,157,0.2);
+  letter-spacing: 0.04em;
+}
+
+.badge.active {
+  background: var(--accent-green-dim);
+  color: var(--accent-green);
+}

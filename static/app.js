@@ -206,6 +206,7 @@ function renderSignalCards(signals, isExample = false, message = '') {
                 <span class="signal-symbol">${s.symbol}</span>
                 <span class="signal-side ${s.side.toLowerCase()}">${s.side}</span>
             </div>
+            ${s.strategy_id ? `<div class="signal-strategy-tag">🎯 ${s.strategy_id}</div>` : ''}
             <div class="signal-details">
                 <div class="signal-detail">
                     <span class="detail-label">RSI</span>
@@ -232,6 +233,11 @@ function renderSignalCards(signals, isExample = false, message = '') {
                     <span class="detail-value">1:${s.rr}</span>
                 </div>
             </div>
+            ${!s.is_example ? `
+            <div class="signal-actions">
+                <button class="execute-btn" onclick='openExecuteModal(${JSON.stringify(s)})' title="Execute trade">▶ EXECUTE</button>
+                <button class="skip-btn" onclick="skipSignal('${s.id}')" title="Skip signal">× SKIP</button>
+            </div>` : ''}
         </div>
     `).join('') + '</div>';
 }
@@ -558,25 +564,44 @@ async function loadHistory() {
 }
 
 // ============================================
-// BACKTEST
+// BACKTEST (Phase 1.7 — uses real API + Chart.js)
 // ============================================
+let equityChartInstance = null;
+
 function openBacktestModal() {
     const overlay = document.getElementById('backtest-modal');
     if (overlay) overlay.classList.add('show');
+    const chartContainer = document.getElementById('equity-chart-container');
+    if (chartContainer) chartContainer.style.display = 'none';
 }
 
 function closeBacktestModal() {
     const overlay = document.getElementById('backtest-modal');
     if (overlay) overlay.classList.remove('show');
+    if (equityChartInstance) { equityChartInstance.destroy(); equityChartInstance = null; }
 }
 
-async function runBacktest() {
+async function runBacktest(strategyId) {
     openBacktestModal();
     const container = document.getElementById('backtest-content');
-    if (container) container.innerHTML = '<div class="loading"><span class="spinner"></span> Scanning coins & running backtest...</div>';
+    const chartContainer = document.getElementById('equity-chart-container');
+    if (container) container.innerHTML = '<div class="loading"><span class="spinner"></span> Running backtest...</div>';
+    if (chartContainer) chartContainer.style.display = 'none';
+
+    // If no strategyId provided, try to get from selector
+    if (!strategyId) {
+        const sel = document.getElementById('strategy-select');
+        strategyId = sel ? sel.value : null;
+    }
+
+    if (!strategyId) {
+        showToast('Select a strategy first', 'error');
+        if (container) container.innerHTML = '<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">No strategy selected</div></div>';
+        return;
+    }
 
     showToast('Running backtest...', 'info');
-    const data = await apiPost('/api/performance/backtest');
+    const data = await apiPost('/api/backtest/run', { strategy_id: strategyId, days: 30 });
 
     if (!data || !data.success) {
         if (container) container.innerHTML = `<div class="empty-state"><div class="empty-state-icon">⚠️</div><div class="empty-state-text">${data?.error || 'Backtest failed'}</div></div>`;
@@ -584,39 +609,70 @@ async function runBacktest() {
         return;
     }
 
-    const s = data.summary;
-    const results = data.results || [];
+    const s = data.summary || {};
+    const trades = data.trades || [];
+    const equity = data.equity_curve || [];
 
     let html = `
         <div class="perf-stats" style="margin-bottom:1rem;">
-            <div class="perf-stat"><div class="perf-value">${s.total_signals}</div><div class="perf-label">Signals</div></div>
-            <div class="perf-stat"><div class="perf-value positive">${s.wins}</div><div class="perf-label">Wins</div></div>
-            <div class="perf-stat"><div class="perf-value negative">${s.losses}</div><div class="perf-label">Losses</div></div>
-            <div class="perf-stat"><div class="perf-value">${s.win_rate}%</div><div class="perf-label">Win Rate</div></div>
-            <div class="perf-stat"><div class="perf-value ${s.total_pnl >= 0 ? 'positive' : 'negative'}">${s.total_pnl >= 0 ? '+' : ''}${s.total_pnl}%</div><div class="perf-label">Total PnL</div></div>
+            <div class="perf-stat"><div class="perf-value">${s.total_trades || 0}</div><div class="perf-label">Trades</div></div>
+            <div class="perf-stat"><div class="perf-value positive">${s.winning_trades || 0}</div><div class="perf-label">Wins</div></div>
+            <div class="perf-stat"><div class="perf-value negative">${s.losing_trades || 0}</div><div class="perf-label">Losses</div></div>
+            <div class="perf-stat"><div class="perf-value">${s.win_rate || 0}%</div><div class="perf-label">Win Rate</div></div>
+            <div class="perf-stat"><div class="perf-value ${(s.total_pnl_pct || 0) >= 0 ? 'positive' : 'negative'}">${(s.total_pnl_pct || 0) >= 0 ? '+' : ''}${s.total_pnl_pct || 0}%</div><div class="perf-label">Total PnL</div></div>
+            <div class="perf-stat"><div class="perf-value negative">-${s.max_drawdown_pct || 0}%</div><div class="perf-label">Max DD</div></div>
         </div>`;
 
-    if (results.length === 0) {
-        html += '<div class="empty-state"><div class="empty-state-text">No signals found in current market</div><div class="empty-state-sub">Try again later when market conditions change</div></div>';
-    } else {
-        html += `<table class="history-table"><thead><tr><th>Symbol</th><th>Side</th><th>RSI</th><th>Conf</th><th>PnL</th><th>Result</th></tr></thead><tbody>`;
-        for (const r of results) {
+    if (trades.length > 0) {
+        html += `<table class="history-table"><thead><tr><th>Symbol</th><th>Side</th><th>PnL</th><th>Result</th><th>Date</th></tr></thead><tbody>`;
+        trades.slice(0, 20).forEach(t => {
             html += `<tr>
-                <td>${r.symbol}</td>
-                <td><span class="signal-side ${r.side.toLowerCase()}" style="font-size:0.65rem">${r.side}</span></td>
-                <td>${r.rsi}</td>
-                <td>${r.confidence}%</td>
-                <td style="color:${r.simulated_pnl >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">${r.simulated_pnl >= 0 ? '+' : ''}${r.simulated_pnl}%</td>
-                <td style="color:${r.outcome === 'WIN' ? 'var(--accent-green)' : 'var(--accent-red)'}">${r.outcome}</td>
+                <td>${t.symbol || '-'}</td>
+                <td><span class="signal-side ${(t.side||'buy').toLowerCase()}" style="font-size:0.65rem">${t.side || '-'}</span></td>
+                <td style="color:${(t.pnl_pct||0) >= 0 ? 'var(--accent-green)' : 'var(--accent-red)'}">${(t.pnl_pct||0) >= 0 ? '+' : ''}${t.pnl_pct || 0}%</td>
+                <td style="color:${t.outcome === 'WIN' ? 'var(--accent-green)' : 'var(--accent-red)'}">${t.outcome || '-'}</td>
+                <td style="color:var(--text-secondary)">${t.exit_time ? new Date(t.exit_time).toLocaleDateString() : '-'}</td>
             </tr>`;
-        }
+        });
         html += '</tbody></table>';
+    } else {
+        html += '<div class="empty-state"><div class="empty-state-text">No trades found in this period</div></div>';
     }
 
-    html += `<div style="margin-top:0.75rem;font-size:0.7rem;color:var(--text-muted)">Config: ${data.config_used.mode} / ${data.config_used.interval} / Top ${data.config_used.coin_pool}</div>`;
-
     if (container) container.innerHTML = html;
-    showToast(`Backtest done: ${s.total_signals} signals, ${s.win_rate}% win rate`, 'success');
+
+    // Render equity curve chart if data available
+    if (equity.length > 1 && chartContainer) {
+        chartContainer.style.display = 'block';
+        if (equityChartInstance) equityChartInstance.destroy();
+        const ctx = document.getElementById('equity-chart').getContext('2d');
+        equityChartInstance = new Chart(ctx, {
+            type: 'line',
+            data: {
+                labels: equity.map((_, i) => i),
+                datasets: [{
+                    label: 'Equity',
+                    data: equity,
+                    borderColor: '#00ff9d',
+                    backgroundColor: 'rgba(0,255,157,0.05)',
+                    borderWidth: 2,
+                    pointRadius: 0,
+                    fill: true,
+                    tension: 0.3
+                }]
+            },
+            options: {
+                responsive: true,
+                plugins: { legend: { display: false } },
+                scales: {
+                    x: { display: false },
+                    y: { ticks: { color: '#64748b', font: { size: 10 } }, grid: { color: '#1e293b' } }
+                }
+            }
+        });
+    }
+
+    showToast(`Backtest: ${s.win_rate || 0}% win rate, ${s.total_pnl_pct || 0}% PnL`, 'success');
 }
 
 // ============================================
@@ -1020,6 +1076,8 @@ function refreshAll() {
     refreshSignals();
     refreshPerformance();
     refreshBotStatus();
+    if (typeof refreshPositions === 'function') refreshPositions();
+    if (typeof refreshRiskStatus === 'function') refreshRiskStatus();
 }
 
 // ============================================
@@ -1039,6 +1097,8 @@ document.addEventListener('DOMContentLoaded', () => {
     refreshAll();
     loadConfig();
     loadBinanceConfig();
+    if (typeof refreshStrategies === 'function') refreshStrategies();
+    loadStrategySelector();
 
     // Check status for indicators
     (async () => {
@@ -1054,6 +1114,10 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // Auto-refresh every 30 seconds
     setInterval(refreshAll, 30000);
+    // Positions refresh every 10 seconds
+    setInterval(() => { if (typeof refreshPositions === 'function') refreshPositions(); }, 10000);
+    // Risk status refresh every 30 seconds
+    setInterval(() => { if (typeof refreshRiskStatus === 'function') refreshRiskStatus(); }, 30000);
 
     // Close modals on overlay click
     document.querySelectorAll('.modal-overlay').forEach(overlay => {
@@ -1239,19 +1303,133 @@ async function deleteStrategy(strategyId) {
 // ============================================
 // STRATEGY MODAL (Phase 1.7)
 // ============================================
-function openStrategyModal() {
-    document.getElementById('strategy-modal').classList.add('show');
-    // Clear form
-    document.getElementById('str-name').value = '';
-    document.getElementById('str-coins').value = 'BTCUSDT, ETHUSDT, SOLUSDT';
-    document.getElementById('str-mode').value = 'SWING';
-    document.getElementById('str-timeframe').value = '1h';
-    document.getElementById('str-entry').value = '[{"indicator":"RSI","period":14,"operator":"<","value":30}]';
-    document.getElementById('str-exit').value = '[{"indicator":"RSI","period":14,"operator":">","value":70}]';
-    document.getElementById('str-sl').value = '2.5';
-    document.getElementById('str-tp').value = '7.5';
-    document.getElementById('str-minrr').value = '2.0';
-    document.getElementById('str-minconf').value = '50';
+// ============================================
+// STRATEGY MODAL — ROW BUILDER (Phase 1.7)
+// ============================================
+const CONDITION_INDICATORS = ['RSI','EMA','MACD','BOLLINGER','ATR','VWAP','VOLUME','PRICE'];
+const CONDITION_OPERATORS  = ['<','>','<=','>=','==','CROSS_ABOVE','CROSS_BELOW'];
+
+function buildConditionRowHTML(type, idx) {
+    const indOpts = CONDITION_INDICATORS.map(i => `<option value="${i}">${i}</option>`).join('');
+    const opOpts  = CONDITION_OPERATORS.map(o => `<option value="${o}">${o}</option>`).join('');
+    return `
+    <div class="condition-row" id="${type}-cond-${idx}">
+        <select class="cond-indicator" style="flex:1.5">${indOpts}</select>
+        <input  class="cond-period" type="number" value="14" min="1" placeholder="period" style="width:52px">
+        <select class="cond-operator" style="flex:1">${opOpts}</select>
+        <input  class="cond-value" type="number" value="30" step="any" placeholder="value" style="width:60px">
+        <button class="btn-xs btn-danger-xs" onclick="removeConditionRow('${type}', ${idx})" title="Remove">✕</button>
+    </div>`;
+}
+
+function addConditionRow(type) {
+    const builder = document.getElementById(`${type}-conditions-builder`);
+    if (!builder) return;
+    const idx = builder.querySelectorAll('.condition-row').length;
+    const div = document.createElement('div');
+    div.innerHTML = buildConditionRowHTML(type, idx);
+    builder.appendChild(div.firstElementChild);
+}
+
+function removeConditionRow(type, idx) {
+    const row = document.getElementById(`${type}-cond-${idx}`);
+    if (row) row.remove();
+}
+
+function collectConditions(type) {
+    const builder = document.getElementById(`${type}-conditions-builder`);
+    if (!builder) return [];
+    const rows = builder.querySelectorAll('.condition-row');
+    const result = [];
+    rows.forEach(row => {
+        result.push({
+            indicator: row.querySelector('.cond-indicator').value,
+            period:    parseInt(row.querySelector('.cond-period').value) || 14,
+            operator:  row.querySelector('.cond-operator').value,
+            value:     parseFloat(row.querySelector('.cond-value').value) || 0
+        });
+    });
+    return result;
+}
+
+function openStrategyModal(prefill) {
+    const modal = document.getElementById('strategy-modal');
+    if (!modal) return;
+    modal.classList.add('show');
+
+    const editingId = document.getElementById('str-editing-id');
+    const saveBtn   = document.getElementById('str-save-btn');
+
+    // Clear condition builders
+    ['entry','exit'].forEach(t => {
+        const b = document.getElementById(`${t}-conditions-builder`);
+        if (b) b.innerHTML = '';
+    });
+
+    if (prefill) {
+        // Editing existing strategy
+        if (editingId) editingId.value = prefill.id || '';
+        if (saveBtn) saveBtn.textContent = 'UPDATE STRATEGY';
+        document.getElementById('str-name').value    = prefill.name || '';
+        document.getElementById('str-coins').value   = (typeof prefill.coins === 'string'
+            ? JSON.parse(prefill.coins || '[]') : prefill.coins || []).join(', ');
+        document.getElementById('str-mode').value      = prefill.mode || 'SWING';
+        document.getElementById('str-timeframe').value = prefill.timeframe || '1h';
+        document.getElementById('str-sl').value     = prefill.sl_pct || 2.5;
+        document.getElementById('str-tp').value     = prefill.tp_pct || 7.5;
+        document.getElementById('str-minrr').value  = prefill.min_rr || 2.0;
+        document.getElementById('str-minconf').value= prefill.min_confidence || 50;
+        document.getElementById('str-entry-logic').value = prefill.entry_logic || 'AND';
+        document.getElementById('str-exit-logic').value  = prefill.exit_logic  || 'OR';
+
+        // Populate condition rows from JSON
+        const entryConds = typeof prefill.entry_conditions === 'string'
+            ? JSON.parse(prefill.entry_conditions || '[]') : prefill.entry_conditions || [];
+        const exitConds = typeof prefill.exit_conditions === 'string'
+            ? JSON.parse(prefill.exit_conditions || '[]') : prefill.exit_conditions || [];
+
+        entryConds.forEach(() => addConditionRow('entry'));
+        exitConds.forEach((c, i) => {
+            addConditionRow('exit');
+            const row = document.querySelectorAll('#exit-conditions-builder .condition-row')[i];
+            if (row) {
+                row.querySelector('.cond-indicator').value = c.indicator || 'RSI';
+                row.querySelector('.cond-period').value    = c.period    || 14;
+                row.querySelector('.cond-operator').value  = c.operator  || '<';
+                row.querySelector('.cond-value').value     = c.value     || 0;
+            }
+        });
+        entryConds.forEach((c, i) => {
+            const row = document.querySelectorAll('#entry-conditions-builder .condition-row')[i];
+            if (row) {
+                row.querySelector('.cond-indicator').value = c.indicator || 'RSI';
+                row.querySelector('.cond-period').value    = c.period    || 14;
+                row.querySelector('.cond-operator').value  = c.operator  || '<';
+                row.querySelector('.cond-value').value     = c.value     || 0;
+            }
+        });
+    } else {
+        // New strategy — defaults
+        if (editingId) editingId.value = '';
+        if (saveBtn) saveBtn.textContent = 'CREATE STRATEGY';
+        document.getElementById('str-name').value     = '';
+        document.getElementById('str-coins').value    = 'BTCUSDT, ETHUSDT, SOLUSDT';
+        document.getElementById('str-mode').value     = 'SWING';
+        document.getElementById('str-timeframe').value= '1h';
+        document.getElementById('str-sl').value       = '2.5';
+        document.getElementById('str-tp').value       = '7.5';
+        document.getElementById('str-minrr').value    = '2.0';
+        document.getElementById('str-minconf').value  = '50';
+        // Add one default entry condition
+        addConditionRow('entry');
+        addConditionRow('exit');
+        // Set exit condition default to RSI > 70
+        const exitRow = document.querySelector('#exit-conditions-builder .condition-row');
+        if (exitRow) {
+            exitRow.querySelector('.cond-operator').value = '>';
+            exitRow.querySelector('.cond-value').value    = '70';
+        }
+    }
 }
 
 function closeStrategyModal() {
@@ -1259,44 +1437,49 @@ function closeStrategyModal() {
 }
 
 async function saveStrategy() {
-    const name = document.getElementById('str-name').value.trim();
-    const coins = document.getElementById('str-coins').value.trim();
-    const mode = document.getElementById('str-mode').value;
-    const timeframe = document.getElementById('str-timeframe').value;
-    const entryRaw = document.getElementById('str-entry').value.trim();
-    const exitRaw = document.getElementById('str-exit').value.trim();
-    const sl_pct = parseFloat(document.getElementById('str-sl').value) || 2.5;
-    const tp_pct = parseFloat(document.getElementById('str-tp').value) || 7.5;
-    const min_rr = parseFloat(document.getElementById('str-minrr').value) || 2.0;
-    const min_conf = parseInt(document.getElementById('str-minconf').value) || 50;
-    
-    if (!name || !coins) {
-        showToast('Name and coins are required', 'error');
-        return;
+    const editingId  = document.getElementById('str-editing-id')?.value?.trim();
+    const name       = document.getElementById('str-name').value.trim();
+    const coinsRaw   = document.getElementById('str-coins').value.trim();
+    const mode       = document.getElementById('str-mode').value;
+    const timeframe  = document.getElementById('str-timeframe').value;
+    const sl_pct     = parseFloat(document.getElementById('str-sl').value)    || 2.5;
+    const tp_pct     = parseFloat(document.getElementById('str-tp').value)    || 7.5;
+    const min_rr     = parseFloat(document.getElementById('str-minrr').value) || 2.0;
+    const min_confidence = parseInt(document.getElementById('str-minconf').value) || 50;
+    const entry_logic  = document.getElementById('str-entry-logic')?.value || 'AND';
+    const exit_logic   = document.getElementById('str-exit-logic')?.value  || 'OR';
+
+    if (!name || !coinsRaw) { showToast('Name and coins are required', 'error'); return; }
+
+    const entry_conditions = collectConditions('entry');
+    const exit_conditions  = collectConditions('exit');
+
+    if (entry_conditions.length === 0) { showToast('Add at least one entry condition', 'error'); return; }
+    if (exit_conditions.length  === 0) { showToast('Add at least one exit condition', 'error'); return; }
+
+    const coins = coinsRaw.split(',').map(c => c.trim().toUpperCase()).filter(Boolean);
+
+    const payload = { name, coins, mode, timeframe, entry_conditions, exit_conditions,
+        entry_logic, exit_logic, sl_pct, tp_pct, min_rr, min_confidence };
+
+    let resp;
+    if (editingId) {
+        resp = await apiFetch(`/api/strategies/${editingId}`, {
+            method: 'PUT',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+        });
+    } else {
+        resp = await apiPost('/api/strategies/', payload);
     }
-    
-    // Parse conditions
-    let entry_conditions = [];
-    let exit_conditions = [];
-    try { entry_conditions = JSON.parse(entryRaw); } catch { showToast('Invalid entry conditions JSON', 'error'); return; }
-    try { exit_conditions = JSON.parse(exitRaw); } catch { showToast('Invalid exit conditions JSON', 'error'); return; }
-    
-    const coinsArr = coins.split(',').map(c => c.trim().toUpperCase()).filter(c => c);
-    
-    const resp = await apiPost('/api/strategies/', {
-        name, coins: coinsArr,
-        mode, timeframe,
-        entry_conditions, exit_conditions,
-        entry_logic: 'AND', exit_logic: 'OR',
-        sl_pct, tp_pct, min_rr, min_conf
-    });
-    
+
     if (resp && resp.success) {
-        showToast('Strategy created', 'success');
+        showToast(editingId ? 'Strategy updated' : 'Strategy created', 'success');
         closeStrategyModal();
         refreshStrategies();
+        loadStrategySelector();
     } else {
-        showToast(resp?.error || 'Failed to create strategy', 'error');
+        showToast(resp?.error || 'Failed to save strategy', 'error');
     }
 }
 
@@ -1361,4 +1544,36 @@ function refreshAll() {
     refreshPositions();
     refreshRiskStatus();
     refreshStrategies();
+}
+
+async function skipSignal(signalId) {
+    const resp = await apiPost(`/api/signals/${signalId}/skip`);
+    if (resp?.success) {
+        showToast('Signal skipped', 'success');
+        refreshSignals();
+    } else {
+        showToast('Failed to skip signal', 'error');
+    }
+}
+
+async function loadStrategySelector() {
+    const resp = await apiFetch('/api/strategies');
+    const selector = document.getElementById('strategy-selector');
+    if (!selector || !resp?.strategies) return;
+    selector.innerHTML = resp.strategies.map(s => `<option value="${s.id}">${s.name}</option>`).join('');
+}
+
+async function refreshStrategies() {
+    const resp = await apiFetch('/api/strategies');
+    const container = document.getElementById('strategies-list');
+    if (!container || !resp?.strategies) return;
+    container.innerHTML = resp.strategies.map(s => `
+        <div class="strategy-item">
+            <span>${s.name}</span>
+            <div class="actions">
+                <button onclick='openStrategyModal(${JSON.stringify(s)})'>Edit</button>
+                <button onclick='runBacktest("${s.id}")'>Backtest</button>
+            </div>
+        </div>
+    `).join('');
 }

@@ -17,6 +17,8 @@
             <h1>TradingCore Dashboard</h1>
         </div>
         <div class="header-right">
+            <span class="testnet-badge" id="testnet-badge">🧪 TESTNET</span>
+            <span class="risk-badge" id="risk-header-badge">Risk: 🟢 OK</span>
             <button class="btn btn-stop" id="stop-btn" style="display:none;">■ STOP BOT</button>
             <button class="btn btn-start" id="start-btn">▶ START BOT</button>
         </div>
@@ -92,7 +94,7 @@
         </div>
 
         <!-- ===== POSITIONS PANEL ===== -->
-        <div class="panel positions-panel" id="positions-panel" style="display:none;">
+        <div class="panel positions-panel" id="positions-panel">
             <div class="panel-title">📌 Open Positions <span id="position-count-badge" class="badge">0</span></div>
             <div id="positions-container">
                 <div class="empty-state">No open positions</div>
@@ -150,22 +152,13 @@
             <div class="panel-title">Bot Controls</div>
 
             <div class="control-group">
-                <div class="control-label">Mode</div>
-                <select id="mode-select">
-                    <option value="SWING">SWING</option>
-                    <option value="SCALP">SCALP</option>
-                    <option value="BOTH">BOTH</option>
+                <div class="control-label">Active Strategy</div>
+                <select id="strategy-select">
+                    <option value="">— No Strategy Selected —</option>
                 </select>
             </div>
-
-            <div class="control-group">
-                <div class="control-label">Interval</div>
-                <select id="interval-select">
-                    <option value="5m">5 min</option>
-                    <option value="15m" selected>15 min</option>
-                    <option value="30m">30 min</option>
-                    <option value="1h">1 hour</option>
-                </select>
+            <div style="margin-bottom:0.85rem;">
+                <button class="btn-xs" onclick="openStrategyModal()" style="width:100%;justify-content:center;">+ NEW STRATEGY</button>
             </div>
 
             <div class="control-group">
@@ -384,13 +377,17 @@
 
     <!-- ========== BACKTEST MODAL ========== -->
     <div class="modal-overlay" id="backtest-modal">
-        <div class="modal" style="max-width:560px;">
+        <div class="modal" style="max-width:600px;">
             <div class="modal-header">
                 <h2>🧪 Backtest Results</h2>
                 <button class="modal-close" onclick="closeBacktestModal()">✕</button>
             </div>
-            <div class="modal-body" id="backtest-content" style="max-height:450px;overflow-y:auto;">
+            <div class="modal-body" id="backtest-content" style="max-height:500px;overflow-y:auto;">
                 <div class="loading"><span class="spinner"></span> Running backtest...</div>
+            </div>
+            <div style="padding:0 1.75rem 1rem;display:none;" id="equity-chart-container">
+                <div class="control-label" style="margin-bottom:0.5rem;">Equity Curve</div>
+                <canvas id="equity-chart" height="120"></canvas>
             </div>
         </div>
     </div>
@@ -438,12 +435,13 @@
 
     <!-- ========== STRATEGY MODAL ========== -->
     <div class="modal-overlay" id="strategy-modal">
-        <div class="modal" style="max-width:560px;">
+        <div class="modal" style="max-width:580px;">
             <div class="modal-header">
                 <h2>🎯 Strategy Builder</h2>
                 <button class="modal-close" onclick="closeStrategyModal()">✕</button>
             </div>
-            <div class="modal-body" style="max-height:450px;overflow-y:auto;">
+            <input type="hidden" id="str-editing-id">
+            <div class="modal-body" style="max-height:500px;overflow-y:auto;">
                 <div class="control-group">
                     <div class="control-label">Strategy Name</div>
                     <input type="text" id="str-name" placeholder="My RSI Strategy">
@@ -452,49 +450,80 @@
                     <div class="control-label">Coins (comma separated)</div>
                     <input type="text" id="str-coins" placeholder="BTCUSDT, ETHUSDT, SOLUSDT">
                 </div>
-                <div class="control-group">
-                    <div class="control-label">Mode</div>
-                    <select id="str-mode">
-                        <option value="SWING">SWING</option>
-                        <option value="SCALP">SCALP</option>
-                    </select>
-                </div>
-                <div class="control-group">
-                    <div class="control-label">Timeframe</div>
-                    <select id="str-timeframe">
-                        <option value="1m">1 min</option>
-                        <option value="5m">5 min</option>
-                        <option value="15m">15 min</option>
-                        <option value="1h" selected>1 hour</option>
-                        <option value="4h">4 hours</option>
-                    </select>
-                </div>
-                <div class="entry-exit-section">
-                    <div class="control-label">Entry Conditions (JSON)</div>
-                    <textarea id="str-entry" rows="4" placeholder='[{"indicator":"RSI","period":14,"operator":"<","value":30}]'></textarea>
-                </div>
-                <div class="entry-exit-section">
-                    <div class="control-label">Exit Conditions (JSON)</div>
-                    <textarea id="str-exit" rows="3" placeholder='[{"indicator":"RSI","period":14,"operator":">","value":70}]'></textarea>
-                </div>
-                <div class="control-group">
-                    <div class="control-label">SL % / TP %</div>
-                    <div style="display:flex;gap:0.5rem;">
-                        <input type="number" id="str-sl" placeholder="2.5" style="flex:1;" value="2.5">
-                        <input type="number" id="str-tp" placeholder="7.5" style="flex:1;" value="7.5">
+                <div style="display:flex;gap:0.5rem;margin-bottom:0.85rem;">
+                    <div style="flex:1;">
+                        <div class="control-label">Mode</div>
+                        <select id="str-mode">
+                            <option value="SWING">SWING</option>
+                            <option value="SCALP">SCALP</option>
+                        </select>
+                    </div>
+                    <div style="flex:1;">
+                        <div class="control-label">Timeframe</div>
+                        <select id="str-timeframe">
+                            <option value="1m">1 min</option>
+                            <option value="5m">5 min</option>
+                            <option value="15m">15 min</option>
+                            <option value="1h" selected>1 hour</option>
+                            <option value="4h">4 hours</option>
+                        </select>
                     </div>
                 </div>
-                <div class="control-group">
-                    <div class="control-label">Min R:R / Min Confidence</div>
-                    <div style="display:flex;gap:0.5rem;">
-                        <input type="number" id="str-minrr" placeholder="2.0" style="flex:1;" value="2.0">
-                        <input type="number" id="str-minconf" placeholder="50" style="flex:1;" value="50">
+
+                <!-- Entry Conditions Builder -->
+                <div class="condition-section">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                        <div class="control-label" style="margin-bottom:0;">Entry Conditions</div>
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <select id="str-entry-logic" style="width:auto;font-size:0.7rem;padding:0.2rem 0.4rem;">
+                                <option value="AND">AND (all)</option>
+                                <option value="OR">OR (any)</option>
+                            </select>
+                            <button class="btn-xs" onclick="addConditionRow('entry')">+ ADD</button>
+                        </div>
+                    </div>
+                    <div id="entry-conditions-builder" class="condition-builder"></div>
+                </div>
+
+                <!-- Exit Conditions Builder -->
+                <div class="condition-section">
+                    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:0.5rem;">
+                        <div class="control-label" style="margin-bottom:0;">Exit Conditions</div>
+                        <div style="display:flex;align-items:center;gap:0.5rem;">
+                            <select id="str-exit-logic" style="width:auto;font-size:0.7rem;padding:0.2rem 0.4rem;">
+                                <option value="OR">OR (any)</option>
+                                <option value="AND">AND (all)</option>
+                            </select>
+                            <button class="btn-xs" onclick="addConditionRow('exit')">+ ADD</button>
+                        </div>
+                    </div>
+                    <div id="exit-conditions-builder" class="condition-builder"></div>
+                </div>
+
+                <div style="display:flex;gap:0.5rem;margin-bottom:0.85rem;">
+                    <div style="flex:1;">
+                        <div class="control-label">Stop Loss %</div>
+                        <input type="number" id="str-sl" placeholder="2.5" value="2.5" step="0.1">
+                    </div>
+                    <div style="flex:1;">
+                        <div class="control-label">Take Profit %</div>
+                        <input type="number" id="str-tp" placeholder="7.5" value="7.5" step="0.1">
+                    </div>
+                </div>
+                <div style="display:flex;gap:0.5rem;">
+                    <div style="flex:1;">
+                        <div class="control-label">Min R:R</div>
+                        <input type="number" id="str-minrr" placeholder="2.0" value="2.0" step="0.1">
+                    </div>
+                    <div style="flex:1;">
+                        <div class="control-label">Min Confidence %</div>
+                        <input type="number" id="str-minconf" placeholder="50" value="50">
                     </div>
                 </div>
             </div>
             <div class="modal-actions">
                 <button class="btn btn-secondary" onclick="closeStrategyModal()" style="flex:1;justify-content:center;">CANCEL</button>
-                <button class="btn btn-start" onclick="saveStrategy()" style="flex:1;justify-content:center;">CREATE STRATEGY</button>
+                <button class="btn btn-start" id="str-save-btn" onclick="saveStrategy()" style="flex:1;justify-content:center;">CREATE STRATEGY</button>
             </div>
         </div>
     </div>
@@ -512,6 +541,7 @@
         </div>
     </div>
 
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src="/static/app.js"></script>
 </body>
 </html>

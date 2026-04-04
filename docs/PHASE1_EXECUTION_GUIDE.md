@@ -6,12 +6,14 @@ This is a step-by-step execution guide for building TradingCore Phase 1.
 **Follow tasks IN ORDER. Do NOT skip ahead. Test after each task.**
 
 ### Project Context
+
 - **Framework:** Flask (Python) — see `app.py` for entry point
 - **Frontend:** Vanilla HTML/JS/CSS — single page in `templates/dashboard.html`
 - **Current state:** Dashboard UI, Signal Engine, Bot Scheduler, Learning System — all working
 - **Goal:** Add SQLite DB, flexible strategies, real backtest, position tracking, semi-auto execution, risk management
 
 ### Key Files to Read Before Starting
+
 1. `app.py` — Flask app, blueprint registration
 2. `routes/market.py` — Example of route pattern (Blueprint, `@require_auth`, JSON responses)
 3. `strategies/signal_engine.py` — Core indicator calculations (RSI, EMA, ATR, VWAP)
@@ -20,6 +22,7 @@ This is a step-by-step execution guide for building TradingCore Phase 1.
 6. `routes/bot_control.py` — APScheduler pattern, scan_job()
 
 ### Code Patterns to Follow
+
 ```python
 # Route pattern (see routes/market.py):
 from flask import Blueprint, jsonify, request
@@ -40,12 +43,14 @@ app.register_blueprint(example_bp, url_prefix='/api/example')
 ```
 
 ### Binance Testnet Config
+
 - Testnet Spot URL: `https://testnet.binance.vision`
 - Testnet Futures URL: `https://testnet.binancefuture.com`
 - API keys are in `config/bot_config.json` under `testnet_api_key` and `testnet_secret_key`
 - `use_testnet: true` means use testnet URLs
 
 ### Commit Convention
+
 After each sub-phase: `git add -A && git commit -m "feat: Phase 1.X - [description]"`
 
 ---
@@ -57,6 +62,7 @@ After each sub-phase: `git add -A && git commit -m "feat: Phase 1.X - [descripti
 **Create file:** `services/database.py`
 
 **Requirements:**
+
 - Use Python's built-in `sqlite3` module (no extra dependencies)
 - Database file location: `data/trading.db`
 - Thread-safe: use `check_same_thread=False`
@@ -193,6 +199,7 @@ CREATE TABLE IF NOT EXISTS risk_state (
 ```
 
 **Functions to implement:**
+
 ```python
 def get_db_path():
     """Return absolute path to data/trading.db"""
@@ -217,6 +224,7 @@ def migrate_json_to_sqlite():
 **Modify:** `app.py`
 
 Add after `app = Flask(__name__)`:
+
 ```python
 from services.database import init_db
 init_db()
@@ -229,6 +237,7 @@ init_db()
 **Modify:** `services/binance_client.py`
 
 Add testnet support to `BinanceClient.__init__`:
+
 ```python
 def __init__(self, api_key, secret_key, testnet=False):
     self.api_key = api_key
@@ -240,6 +249,7 @@ def __init__(self, api_key, secret_key, testnet=False):
 ```
 
 Add helper to load client from config:
+
 ```python
 @staticmethod
 def from_config():
@@ -280,6 +290,7 @@ git add -A && git commit -m "feat: Phase 1.1 - SQLite database + testnet config"
 **Purpose:** Evaluate user-defined strategy conditions against market data.
 
 **Key concept:** A strategy's entry/exit conditions are stored as JSON arrays. Each condition is a dict like:
+
 ```json
 {"indicator": "RSI", "period": 14, "operator": "<", "value": 30}
 ```
@@ -344,6 +355,7 @@ def scan_all_active_strategies(market_data=None):
 ```
 
 **Important:** Reuse indicator functions from `strategies/signal_engine.py`:
+
 ```python
 from strategies.signal_engine import (
     calculate_rsi_wilder, calculate_ema, calculate_atr,
@@ -352,6 +364,7 @@ from strategies.signal_engine import (
 ```
 
 **For MACD (new indicator):**
+
 ```python
 def calculate_macd(closes, fast=12, slow=26, signal=9):
     ema_fast = calculate_ema(closes, fast)
@@ -363,6 +376,7 @@ def calculate_macd(closes, fast=12, slow=26, signal=9):
 ```
 
 **For Bollinger Bands (new indicator):**
+
 ```python
 def calculate_bollinger(closes, period=20, std_dev=2):
     sma = sum(closes[-period:]) / period
@@ -423,7 +437,7 @@ def get_templates():
 
 **Endpoints:**
 
-```
+```text
 GET    /                  → List all strategies (exclude templates unless ?include_templates=1)
 POST   /                  → Create new strategy (generate UUID for id)
 GET    /<id>              → Get one strategy
@@ -441,6 +455,7 @@ POST   /from-template     → Create strategy from template (clone template + se
 Store/read from SQLite `strategies` table.
 
 For `POST /` and `PUT /<id>`, validate:
+
 - `name` is required and non-empty
 - `coins` is a valid JSON array
 - `entry_conditions` is a valid JSON array with at least 1 condition
@@ -456,6 +471,7 @@ app.register_blueprint(strategies_bp, url_prefix='/api/strategies')
 ### Task 1.2.5: Seed templates on startup
 
 In `app.py`, after `init_db()`:
+
 ```python
 from strategies.strategy_templates import seed_templates
 seed_templates()  # Insert templates if not already in DB
@@ -464,6 +480,7 @@ seed_templates()  # Insert templates if not already in DB
 ### Task 1.2.6: Update `routes/bot_control.py`
 
 Modify `scan_job()` function:
+
 - Instead of calling `run_scan(config, market_data)`, call `scan_all_active_strategies(market_data)`
 - Keep the existing `run_scan()` as fallback if no strategies are active
 - Rest of scan_job stays the same (save signals, send Telegram, etc.)
@@ -557,6 +574,7 @@ def calculate_sharpe_ratio(returns, risk_free_rate=0.02):
 ```
 
 **Important considerations:**
+
 - Don't open a new position if one is already open for same coin
 - Use the strategy's SL/TP percentages
 - Track equity curve: start at initial_balance, adjust after each closed trade
@@ -603,6 +621,7 @@ def get_backtest_detail(backtest_id):
 ### Task 1.3.3: Register blueprint
 
 In `app.py`:
+
 ```python
 from routes.backtest import backtest_bp
 app.register_blueprint(backtest_bp, url_prefix='/api/backtest')
@@ -682,7 +701,7 @@ def get_portfolio_summary():
 
 **Blueprint name:** `positions_bp`, prefix `/api/positions`
 
-```
+```text
 GET  /              → get_open_positions()
 GET  /history       → get_position_history()
 GET  /summary       → get_portfolio_summary()
@@ -692,6 +711,7 @@ POST /<id>/close    → close_position(id, request.json['exit_price'])
 ### Task 1.4.3: Add position checking to scheduler
 
 In `routes/bot_control.py`, add a new scheduler job that runs every 30 seconds:
+
 ```python
 scheduler.add_job(
     check_positions_job,
@@ -769,6 +789,7 @@ git add -A && git commit -m "feat: Phase 1.5 - Risk management with circuit brea
 
 Separate client for Binance USDT-M Futures.
 Pattern similar to `binance_client.py` but with:
+
 - Base URL: `https://testnet.binancefuture.com` (testnet) or `https://fapi.binance.com` (live)
 - Different endpoints: `/fapi/v1/order`, `/fapi/v2/account`, `/fapi/v1/leverage`
 
@@ -800,6 +821,7 @@ def execute_signal():
 ### Task 1.6.3: Test
 
 Test full flow with Binance testnet:
+
 1. Start bot → get signal
 2. Click execute → confirm → order sent to testnet
 3. Check position appears in /api/positions
@@ -831,6 +853,7 @@ Add these new UI sections (keep existing sections, ADD new ones):
 ### Task 1.7.2: Update `static/app.js`
 
 Add these functions:
+
 ```javascript
 // Strategy management
 async function loadStrategies() { }
@@ -862,6 +885,7 @@ setInterval(refreshRiskStatus, 30000); // every 30s
 ### Task 1.7.3: Update `static/style.css`
 
 Add styles for:
+
 - `.strategy-card` — card for each strategy
 - `.position-row` — row in open positions panel
 - `.execute-btn` — green pulsing button
@@ -874,6 +898,7 @@ Add styles for:
 ### Task 1.7.4: Add Chart.js
 
 In `dashboard.html`, add before `</body>`:
+
 ```html
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 ```
@@ -954,7 +979,8 @@ After all sub-phases are complete, verify:
 5. **Report:** Tell the user which sub-phase you completed and which is next
 
 **Example:** If you completed Sub-Phase 1.2, update AGENT.md:
-```
+
+```text
 BEFORE: 2. ⬜ Flexible Strategy System
 AFTER:  2. ✅ Flexible Strategy System
 ```
@@ -962,11 +988,13 @@ AFTER:  2. ✅ Flexible Strategy System
 This ensures the NEXT agent knows exactly where to pick up.
 
 **If the user tells you to "continue" or "start" without specifying a sub-phase:**
+
 1. Read `AGENT.md`
 2. Find the first ⬜ item
 3. That is your task — go to that section in THIS file and execute it
 
 **Design rules:**
+
 - UI dark theme: `#0a0e1a` background, `#111827` cards, `#00ff9d` accent green, `#ff4757` accent red
 - All text must be readable on dark background
 - Mobile responsive (existing dashboard already is)
