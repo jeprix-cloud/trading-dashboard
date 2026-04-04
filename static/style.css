@@ -242,8 +242,8 @@ body::before {
    ============================================ */
  .dashboard {
    display: grid;
-   grid-template-columns: 220px 1fr 270px;
-   grid-template-rows: auto 1fr auto auto;
+   grid-template-columns: 220px 1fr 280px;
+   grid-auto-rows: auto;
    gap: 0.75rem;
    padding: 0.75rem;
    align-items: start;
@@ -430,8 +430,10 @@ body::before {
    LIVE SIGNALS (center panel)
    ============================================ */
 .live-signals {
+  grid-column: 2;
+  grid-row: 1 / span 4;
   overflow-y: auto;
-  max-height: calc(100vh - 200px);
+  max-height: calc(100vh - 90px);
   animation-delay: 0.1s;
 }
 
@@ -659,6 +661,7 @@ select option {
    ============================================ */
 .performance {
   grid-column: 1 / -1;
+  grid-row: 5;
   animation-delay: 0.2s;
 }
 
@@ -1562,10 +1565,24 @@ textarea:focus { outline: none; border-color: var(--accent-blue); }
 .strategies-panel { border-left: 3px solid var(--accent-green); }
 
 
-/* ===== Phase 1.7: Grid placements for new panels ===== */
-.positions-panel { grid-column: 3; grid-row: 1; }
-.risk-panel      { grid-column: 3; grid-row: 2; }
-.strategies-panel{ grid-column: 3; grid-row: 3; }
+
+/* ===== DASHBOARD LAYOUT — EXPLICIT GRID PLACEMENT (ALL PANELS) ===== */
+
+/* Left column */
+.market-pulse    { grid-column: 1; grid-row: 1; }
+.watchlist-panel { grid-column: 1; grid-row: 2; }
+
+/* Center column — spans the height of left + right content */
+.live-signals    { grid-column: 2; grid-row: 1 / span 4; }
+
+/* Right column */
+.bot-controls    { grid-column: 3; grid-row: 1; }
+.positions-panel { grid-column: 3; grid-row: 2; }
+.risk-panel      { grid-column: 3; grid-row: 3; }
+.strategies-panel{ grid-column: 3; grid-row: 4; }
+
+/* Bottom — full width */
+.performance     { grid-column: 1 / -1; grid-row: 5; }
 
 /* ============================================
    PHASE 1.7 NEW COMPONENTS
